@@ -1,5 +1,3 @@
-`timescale 1ns / 1ps
-
 /**
  * @param a first 1-bit input
  * @param b second 1-bit input
@@ -26,28 +24,20 @@ module gp4(input wire [3:0] gin, pin,
            output wire gout, pout,
            output wire [2:0] cout);
 
-// Compute intermediate generate and propagate signals
-wire [3:0] g_intermediate, p_intermediate;
-assign g_intermediate[0] = gin[0] | (pin[0] & cin);
-assign p_intermediate[0] = pin[0];
+wire [3:0] c_internal; // Internal carries, not including cin
 
-genvar i;
-generate
-    for (i = 1; i < 4; i = i + 1) begin : gp4_logic
-        assign g_intermediate[i] = gin[i] | (pin[i] & g_intermediate[i-1]);
-        assign p_intermediate[i] = pin[i] & p_intermediate[i-1];
-    end
-endgenerate
+// Calculate the carry out for each bit
+assign c_internal[0] = gin[0] | (pin[0] & cin);
+assign c_internal[1] = gin[1] | (pin[1] & c_internal[0]);
+assign c_internal[2] = gin[2] | (pin[2] & c_internal[1]);
+assign cout[0] = c_internal[0];
+assign cout[1] = c_internal[1];
+assign cout[2] = c_internal[2];
 
-// The carry out for the entire 4-bit block
-assign gout = g_intermediate[3];
-// Whether an incoming carry would be propagated through the entire 4-bit block
-assign pout = p_intermediate[3];
+// Calculate the overall generate and propagate for the 4-bit block
+assign gout = gin[3] | (pin[3] & c_internal[2]);
+assign pout = pin[0] & pin[1] & pin[2] & pin[3];
 
-// The carry outs for the low-order 3 bits
-assign cout[0] = g_intermediate[0];
-assign cout[1] = g_intermediate[1];
-assign cout[2] = g_intermediate[2];
 
 endmodule
 
@@ -57,26 +47,20 @@ module gp8(input wire [7:0] gin, pin,
            output wire gout, pout,
            output wire [6:0] cout);
 
-// Compute intermediate generate and propagate signals
-wire [7:0] g_intermediate, p_intermediate;
-assign g_intermediate[0] = gin[0] | (pin[0] & cin);
-assign p_intermediate[0] = pin[0];
+wire [6:0] c_internal; // Internal carries for 8-bit window
 
-generate
-    for (i = 1; i < 8; i = i + 1) begin : gp8_logic
-        assign g_intermediate[i] = gin[i] | (pin[i] & g_intermediate[i-1]);
-        assign p_intermediate[i] = pin[i] & p_intermediate[i-1];
-    end
-endgenerate
+// Calculate intermediate carries based on individual generate and propagate signals
+assign c_internal[0] = gin[0] | (pin[0] & cin);
+// Repeat for bits 1 through 6
+assign c_internal[1] = gin[1] | (pin[1] & c_internal[0]);
+// Continue this pattern up to c_internal[5]
 
-// The carry out for the entire 8-bit block
-assign gout = g_intermediate[7];
-// Whether an incoming carry would be propagated through the entire 8-bit block
-assign pout = p_intermediate[7];
+assign c_internal[6] = gin[6] | (pin[6] & c_internal[5]);
+assign cout = c_internal; // The internal carries are directly the output carries for 8 bits
 
-// The carry outs for the internal bits
-assign cout = g_intermediate[6:0];
-
+// Overall generate and propagate for the 8-bit window
+assign gout = gin[7] | (pin[7] & c_internal[6]);
+assign pout = &pin; // Logical AND of all propagate signals
 
 
 endmodule
@@ -86,25 +70,28 @@ module cla
    input wire         cin,
    output wire [31:0] sum);
 
-  wire [31:0] g, p, c;
+  // Generate initial generate and propagate signals for each bit
+    genvar i;
+    generate
+        for (i = 0; i < 32; i = i + 1) begin : gp_generation
+            gp1 gp1_inst(a[i], b[i], g[i], p[i]);
+        end
+    endgenerate
+    
+    // Use gp8 modules to aggregate generate and propagate signals over 8-bit blocks
+    genvar j;
+    generate
+        for (j = 0; j < 4; j = j + 1) begin : gp8_blocks
+            gp8 gp8_inst(g[j*8 +: 8], p[j*8 +: 8], c[j*8], gout[j], pout[j], cout[j*7 +: 7]);
+        end
+    endgenerate
+    
+    // Compute carry signals using a simpler logic, assuming gp8 provides intermediate carries
+    
+    assign c[0] = cin;
+    
 
-// Generate and propagate signals for each bit
-genvar i;
-generate
-    for (i = 0; i < 32; i = i + 1) begin : gen_prop
-        gp1 gp_instance(a[i], b[i], g[i], p[i]);
-    end
-endgenerate
-
-// use gp8 blocks to compute carries for each 8-bit segment
-wire [3:0] gout, pout;
-wire [28:0] cout; // Internal carries,  the size matches the bits between gp8 blocks
-
-// Instantiate gp8 blocks or logic to compute the carries based on g and p
-
-// Calculate the sum for each bit
-assign sum = a ^ b ^ {cout[30:0], cin};
-
+    // Calculate sum for each bit
+    assign sum = a ^ b ^ c;
 
 endmodule
-
