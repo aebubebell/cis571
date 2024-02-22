@@ -103,7 +103,8 @@ wire [28:0] cout; // Internal carries,  the size matches the bits between gp8 bl
 // Instantiate gp8 blocks or logic to compute the carries based on g and p
 
 // Calculate the sum for each bit
-assign sum = a ^ b ^ {cout[28:1], cin};
+assign sum = a ^ b ^ {cout[30:0], cin};
+
 
 endmodule
 
