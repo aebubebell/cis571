@@ -32,11 +32,11 @@ endmodule
 
 // Correct
 module cla(input wire [31:0] a, b, input wire cin, output wire [31:0] sum);
-      wire [31:0] g, p;
-    wire [32:0] c; // Extended to 32 bits for carry-out calculation
+     wire [31:0] g, p;
+    wire [32:0] c; // Note: Extended to accommodate carry-out
+    genvar i; // Declare genvar i here, once for the entire module
 
-    // Generate and Propagate logic as before
-    genvar i;
+   
     generate
         for (i = 0; i < 32; i = i + 1) begin : gen_prop
             gp1 gp_instance(a[i], b[i], g[i], p[i]);
@@ -47,7 +47,6 @@ module cla(input wire [31:0] a, b, input wire cin, output wire [31:0] sum);
     assign c[0] = cin;
 
     // Sequentially calculate carry bits to avoid circular logic
-    genvar i;
     generate
         for (i = 0; i < 32; i = i + 1) begin
             assign c[i+1] = g[i] | (p[i] & c[i]);
