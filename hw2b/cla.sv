@@ -32,7 +32,8 @@ endmodule
 
 // Correct
 module cla(input wire [31:0] a, b, input wire cin, output wire [31:0] sum);
-    wire [31:0] g, p, c;
+      wire [31:0] g, p;
+    wire [32:0] c; // Extended to 32 bits for carry-out calculation
 
     // Generate and Propagate logic as before
     genvar i;
@@ -42,14 +43,18 @@ module cla(input wire [31:0] a, b, input wire cin, output wire [31:0] sum);
         end
     endgenerate
 
-    // Carry calculation logic, assuming a simple CLA without gp4 and gp8 optimizations
+    // Correctly initialize the carry chain
     assign c[0] = cin;
-    for (i = 1; i < 32; i = i + 1) begin
-        assign c[i] = g[i-1] | (p[i-1] & c[i-1]);
-    end
 
-    // Assuming c[31:0] now represents cout_internal correctly for your design
-    // Adjust the sum calculation accordingly
-    assign sum = a ^ b ^ {c[30:0], cin}; // Adjusted for correct carry integration
+    // Sequentially calculate carry bits to avoid circular logic
+    genvar i;
+    generate
+        for (i = 0; i < 32; i = i + 1) begin
+            assign c[i+1] = g[i] | (p[i] & c[i]);
+        end
+    endgenerate
+
+    // Calculate sum and cout
+    assign sum = a ^ b ^ c[31:0];
+    assign cout = c[32]; // Carry out
 endmodule
-
