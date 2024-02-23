@@ -70,15 +70,13 @@ module gp8(input wire [7:0] gin, pin,
 
 endmodule
 
-module cla
-  (input wire [31:0]  a, b,
-   input wire         cin,
-   output wire [31:0] sum);
+module cla(input wire [31:0] a, b,
+           input wire cin,
+           output wire [31:0] sum);
 
-   wire [31:0] g, p;
-    wire [31:0] c; // Carry bits, including c[0] as the initial carry-in
+    wire [31:0] g, p;
+    wire [32:0] c; // Include c[0] as cin, extending to 32 bits for carry out
     wire gout_unused, pout_unused;
-    wire [3:0] cout_gp8_unused;
 
     // Generate and propagate signals for each bit
     genvar i;
@@ -88,15 +86,16 @@ module cla
         end
     endgenerate
 
-    // gp8 blocks for carry computation
-    gp8 gp8_0(.gin(g[7:0]), .pin(p[7:0]), .cin(cin), .gout(gout_unused), .pout(pout_unused), .cout(c[6:0]));
-    gp8 gp8_1(.gin(g[15:8]), .pin(p[15:8]), .cin(c[7]), .gout(gout_unused), .pout(pout_unused), .cout(c[14:8]));
-    gp8 gp8_2(.gin(g[23:16]), .pin(p[23:16]), .cin(c[15]), .gout(gout_unused), .pout(pout_unused), .cout(c[22:16]));
-    gp8 gp8_3(.gin(g[31:24]), .pin(p[31:24]), .cin(c[23]), .gout(gout_unused), .pout(pout_unused), .cout(c[30:24]));
+    // Initialize carry-in
+    assign c[0] = cin;
+
+    // gp8 blocks for carry computation, ensuring proper chaining
+    gp8 gp8_0(.gin(g[7:0]), .pin(p[7:0]), .cin(c[0]), .gout(gout_unused), .pout(pout_unused), .cout(c[1:7]));
+    gp8 gp8_1(.gin(g[15:8]), .pin(p[15:8]), .cin(c[8]), .gout(gout_unused), .pout(pout_unused), .cout(c[9:15]));
+    gp8 gp8_2(.gin(g[23:16]), .pin(p[23:16]), .cin(c[16]), .gout(gout_unused), .pout(pout_unused), .cout(c[17:23]));
+    gp8 gp8_3(.gin(g[31:24]), .pin(p[31:24]), .cin(c[24]), .gout(gout_unused), .pout(pout_unused), .cout(c[25:31]));
 
     // Calculate the sum bits
-    assign c[0] = cin; // Initial carry-in
-    assign sum = a ^ b ^ c;
-
+    assign sum = a ^ b ^ c[31:0]; // Adjusted to use 32-bit carry, excluding the carry out
 
 endmodule
