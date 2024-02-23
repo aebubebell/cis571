@@ -78,6 +78,8 @@ endmodule
 
 `timescale 1ns / 1ps
 
+`timescale 1ns / 1ps
+
 module cla(
     input wire [31:0] a,
     input wire [31:0] b,
@@ -86,7 +88,7 @@ module cla(
 );
     wire [31:0] g, p; // Generate and propagate signals for each bit
     wire [7:0] gout, pout; // Output generate and propagate signals for 8-bit blocks
-    wire [31:0] cout; // Carry out signals, including carry between 4-bit blocks
+    wire [31:0] cout_internal; // Adjusted: internal carry out signals for gp4 blocks, not including final carry out
 
     // Instantiate gp1 modules for each bit to compute generate and propagate signals
     genvar i;
@@ -97,18 +99,75 @@ module cla(
     endgenerate
 
     // Instantiate gp4 modules for each 4-bit block to compute intermediate generate, propagate, and carry signals
-    gp4 gp4_block0(.gin(g[3:0]), .pin(p[3:0]), .cin(cin), .gout(gout[0]), .pout(pout[0]), .cout(cout[2:0]));
-    gp4 gp4_block1(.gin(g[7:4]), .pin(p[7:4]), .cin(cout[3]), .gout(gout[1]), .pout(pout[1]), .cout(cout[6:4]));
-    gp4 gp4_block2(.gin(g[11:8]), .pin(p[11:8]), .cin(cout[7]), .gout(gout[2]), .pout(pout[2]), .cout(cout[10:8]));
-    gp4 gp4_block3(.gin(g[15:12]), .pin(p[15:12]), .cin(cout[11]), .gout(gout[3]), .pout(pout[3]), .cout(cout[14:12]));
-    gp4 gp4_block4(.gin(g[19:16]), .pin(p[19:16]), .cin(cout[15]), .gout(gout[4]), .pout(pout[4]), .cout(cout[18:16]));
-    gp4 gp4_block5(.gin(g[23:20]), .pin(p[23:20]), .cin(cout[19]), .gout(gout[5]), .pout(pout[5]), .cout(cout[22:20]));
-    gp4 gp4_block6(.gin(g[27:24]), .pin(p[27:24]), .cin(cout[23]), .gout(gout[6]), .pout(pout[6]), .cout(cout[26:24]));
-    gp4 gp4_block7(.gin(g[31:28]), .pin(p[31:28]), .cin(cout[27]), .gout(gout[7]), .pout(pout[7]), .cout(cout[30:28]));
+    gp4 gp4_block0(
+        .gin(g[3:0]), 
+        .pin(p[3:0]), 
+        .cin(cin), 
+        .gout(gout[0]), 
+        .pout(pout[0]), 
+        .cout(cout_internal[2:0])
+    );
+    gp4 gp4_block1(
+        .gin(g[7:4]), 
+        .pin(p[7:4]), 
+        .cin(cout_internal[2]), 
+        .gout(gout[1]), 
+        .pout(pout[1]), 
+        .cout(cout_internal[5:3])
+    );
+    gp4 gp4_block2(
+        .gin(g[11:8]), 
+        .pin(p[11:8]), 
+        .cin(cout_internal[5]), 
+        .gout(gout[2]), 
+        .pout(pout[2]), 
+        .cout(cout_internal[8:6])
+    );
+    gp4 gp4_block3(
+        .gin(g[15:12]), 
+        .pin(p[15:12]), 
+        .cin(cout_internal[8]), 
+        .gout(gout[3]), 
+        .pout(pout[3]), 
+        .cout(cout_internal[11:9])
+    );
+    gp4 gp4_block4(
+        .gin(g[19:16]), 
+        .pin(p[19:16]), 
+        .cin(cout_internal[11]), 
+        .gout(gout[4]), 
+        .pout(pout[4]), 
+        .cout(cout_internal[14:12])
+    );
+    gp4 gp4_block5(
+        .gin(g[23:20]), 
+        .pin(p[23:20]), 
+        .cin(cout_internal[14]), 
+        .gout(gout[5]), 
+        .pout(pout[5]), 
+        .cout(cout_internal[17:15])
+    );
+    gp4 gp4_block6(
+        .gin(g[27:24]), 
+        .pin(p[27:24]), 
+        .cin(cout_internal[17]), 
+        .gout(gout[6]), 
+        .pout(pout[6]), 
+        .cout(cout_internal[20:18])
+    );
+    gp4 gp4_block7(
+        .gin(g[31:28]), 
+        .pin(p[31:28]), 
+        .cin(cout_internal[20]), 
+        .gout(gout[7]), 
+        .pout(pout[7]), 
+        .cout(cout_internal[23:21])
+    );
 
-    //
+    // Calculate the final carry out signals for the entire 32-bit addition
+    // This step might need adjustment based on your full design requirements
 
     // Compute the sum for each bit, including the initial carry-in for the least significant bit
-    assign sum = a ^ b ^ {gout[7] | (pout[7] & cout[27]), cout[30:0]};
+    assign sum = a ^ b ^ {cout_internal[23], cout_internal[22:0], cin}; // Adjusted to ensure proper bit alignment and carry handling
 
 endmodule
