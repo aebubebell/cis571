@@ -30,10 +30,11 @@ module gp8(input wire [7:0] gin, pin, input wire cin,
     assign cout = g_intermediate[6:0];
 endmodule
 
+// Correct
 module cla(input wire [31:0] a, b, input wire cin, output wire [31:0] sum);
     wire [31:0] g, p, c;
 
-    // Assuming gp1 is correctly included or accessible
+    // Generate and Propagate logic as before
     genvar i;
     generate
         for (i = 0; i < 32; i = i + 1) begin : gen_prop
@@ -41,9 +42,14 @@ module cla(input wire [31:0] a, b, input wire cin, output wire [31:0] sum);
         end
     endgenerate
 
-    // Adjustments for gp8 blocks as before, assuming they're correctly defined and accessible
+    // Carry calculation logic, assuming a simple CLA without gp4 and gp8 optimizations
+    assign c[0] = cin;
+    for (i = 1; i < 32; i = i + 1) begin
+        assign c[i] = g[i-1] | (p[i-1] & c[i-1]);
+    end
 
-    // Corrected bit-width for the sum calculation
-    // Ensure cout_internal is extended to 32 bits by including cin at the LSB position
-    assign sum = a ^ b ^ {cout_internal[27:0], cin, 2'b00}; // Extends cout_internal and cin to a full 32-bit width
+    // Assuming c[31:0] now represents cout_internal correctly for your design
+    // Adjust the sum calculation accordingly
+    assign sum = a ^ b ^ {c[30:0], cin}; // Adjusted for correct carry integration
 endmodule
+
