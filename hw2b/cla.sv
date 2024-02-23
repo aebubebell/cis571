@@ -26,7 +26,21 @@ module gp4(input wire [3:0] gin, pin,
            output wire gout, pout,
            output wire [2:0] cout);
 
-   // TODO: your code here
+   // Intermediate signals for carry calculation
+    wire [2:0] c_intermediate;
+
+    // Calculate intermediate carries
+    assign c_intermediate[0] = gin[0] | (pin[0] & cin);
+    assign c_intermediate[1] = gin[1] | (pin[1] & c_intermediate[0]);
+    assign c_intermediate[2] = gin[2] | (pin[2] & c_intermediate[1]);
+
+    // Output carries for the lower 3 bits
+    assign cout = c_intermediate;
+
+    // Compute aggregate generate and propagate signals
+    assign gout = gin[3] | (pin[3] & c_intermediate[2]);
+    assign pout = pin[0] & pin[1] & pin[2] & pin[3];
+
 
 endmodule
 
@@ -36,7 +50,23 @@ module gp8(input wire [7:0] gin, pin,
            output wire gout, pout,
            output wire [6:0] cout);
 
-   // TODO: your code here
+   wire gout_low, pout_low, gout_high, pout_high;
+    wire [2:0] cout_low, cout_high;
+
+    // Lower 4-bit gp4 block
+    gp4 lower_gp4(.gin(gin[3:0]), .pin(pin[3:0]), .cin(cin),
+                  .gout(gout_low), .pout(pout_low), .cout(cout[2:0]));
+
+    // Higher 4-bit gp4 block, with carry input from lower block
+    gp4 higher_gp4(.gin(gin[7:4]), .pin(pin[7:4]), .cin(cout[2]),
+                   .gout(gout_high), .pout(pout_high), .cout(cout[5:3]));
+
+    // Calculate the carry out of the 7th bit
+    assign cout[6] = gout_high | (pout_high & cout[2]);
+
+    // Aggregate generate and propagate for the 8-bit block
+    assign gout = gout_high | (pout_high & gout_low);
+    assign pout = pout_low & pout_high;
 
 endmodule
 
@@ -45,6 +75,28 @@ module cla
    input wire         cin,
    output wire [31:0] sum);
 
-   // TODO: your code here
+   wire [31:0] g, p;
+    wire [31:0] c; // Carry bits, including c[0] as the initial carry-in
+    wire gout_unused, pout_unused;
+    wire [3:0] cout_gp8_unused;
+
+    // Generate and propagate signals for each bit
+    genvar i;
+    generate
+        for (i = 0; i < 32; i = i + 1) begin: gp_gen
+            gp1 gp_unit(.a(a[i]), .b(b[i]), .g(g[i]), .p(p[i]));
+        end
+    endgenerate
+
+    // gp8 blocks for carry computation
+    gp8 gp8_0(.gin(g[7:0]), .pin(p[7:0]), .cin(cin), .gout(gout_unused), .pout(pout_unused), .cout(c[6:0]));
+    gp8 gp8_1(.gin(g[15:8]), .pin(p[15:8]), .cin(c[7]), .gout(gout_unused), .pout(pout_unused), .cout(c[14:8]));
+    gp8 gp8_2(.gin(g[23:16]), .pin(p[23:16]), .cin(c[15]), .gout(gout_unused), .pout(pout_unused), .cout(c[22:16]));
+    gp8 gp8_3(.gin(g[31:24]), .pin(p[31:24]), .cin(c[23]), .gout(gout_unused), .pout(pout_unused), .cout(c[30:24]));
+
+    // Calculate the sum bits
+    assign c[0] = cin; // Initial carry-in
+    assign sum = a ^ b ^ c;
+
 
 endmodule
