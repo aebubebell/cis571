@@ -65,7 +65,7 @@ module cla(
         end
     endgenerate
 
-    /
+    //
     gp8 gp8_inst0(.gin(g[7:0]), .pin(p[7:0]), .cin(cin), .gout(g8[0]), .pout(p8[0]), .cout({cout8[0]})); // Adjusted for bit width
     gp8 gp8_inst1(.gin(g[15:8]), .pin(p[15:8]), .cin(cout8[0]), .gout(g8[1]), .pout(p8[1]), .cout({cout8[1]}));
     gp8 gp8_inst2(.gin(g[23:16]), .pin(p[23:16]), .cin(cout8[1]), .gout(g8[2]), .pout(p8[2]), .cout({cout8[2]}));
