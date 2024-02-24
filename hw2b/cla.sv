@@ -42,26 +42,24 @@ module gp8(input wire [7:0] gin, pin, input wire cin,
     assign pout = &pin; // Simplified expression for pout
 endmodule
 
-module cla(input wire [31:0] a, b, input wire cin,
-           output wire [31:0] sum);
+module cla(input wire [31:0] a, b, input wire cin, output wire [31:0] sum);
     wire [31:0] g, p;
-    wire [32:0] c; // Expanded to include cin directly
+    wire [32:0] c; // Include cin directly into the carry chain for simplicity.
+    wire [3:0] dummy_gout; 
+    wire [3:0] dummy_pout;
 
-    // Instantiate gp1 for each pair of inputs
-    genvar idx;
-    generate
-        for (idx = 0; idx < 32; idx = idx + 1) begin
-            gp1 single_bit(.a(a[idx]), .b(b[idx]), .g(g[idx]), .p(p[idx]));
-        end
-    endgenerate
+    // Instantiate gp1 for each bit
+    genvar i;
+    for (i = 0; i < 32; i = i + 1) begin : loop_gp1
+        gp1 bit_proc(.a(a[i]), .b(b[i]), .g(g[i]), .p(p[i]));
+    end
 
-    // Sequentially apply gp8 modules for carry computation
-    assign c[0] = cin;
-    gp8 quarter1(.gin(g[7:0]), .pin(p[7:0]), .cin(c[0]), .gout(), .pout(), .cout(c[1:7]));
+    
+    gp8 gp8_0(.gin(g[7:0]), .pin(p[7:0]), .cin(cin), .gout(dummy_gout[0]), .pout(dummy_pout[0]), .cout(c[1:7]));
+    gp8 gp8_1(.gin(g[15:8]), .pin(p[15:8]), .cin(c[8]), .gout(dummy_gout[1]), .pout(dummy_pout[1]), .cout(c[9:15]));
+    gp8 gp8_2(.gin(g[23:16]), .pin(p[23:16]), .cin(c[16]), .gout(dummy_gout[2]), .pout(dummy_pout[2]), .cout(c[17:23]));
+    gp8 gp8_3(.gin(g[31:24]), .pin(p[31:24]), .cin(c[24]), .gout(dummy_gout[3]), .pout(dummy_pout[3]), .cout(c[25:31]));
 
-    gp8 quarter2(.gin(g[15:8]), .pin(p[15:8]), .cin(c[8]), .gout(), .pout(), .cout(c[9:15]));
-    gp8 quarter3(.gin(g[23:16]), .pin(p[23:16]), .cin(c[16]), .gout(), .pout(), .cout(c[17:23]));
-    gp8 quarter4(.gin(g[31:24]), .pin(p[31:24]), .cin(c[24]), .gout(), .pout(), .cout(c[25:31]));
-
+    // Ensure proper bit slicing and connection
     assign sum = a ^ b ^ c[31:0];
 endmodule
