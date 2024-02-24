@@ -44,7 +44,7 @@ module gp8(input wire [7:0] gin, pin,
       gen_modified[j] = gin[j];
     end
     else begin
-      gen_modified[j] = (gin[j] && pin[7:j]);
+        gen_modified[j] = (gin[j] && pin[7:(j-1)]);
     end
   end
 end
