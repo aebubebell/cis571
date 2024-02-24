@@ -80,23 +80,25 @@ module cla
   (input wire [31:0]  a, b,
    input wire         cin,
    output wire [31:0] sum);
+
 wire [31:0] gen_signal, propagate, carry;
 wire [3:0] gen_mid, prop_mid;
 wire [2:0] carry_mid;
 wire gen_out_mid, prop_out_mid;
-gp1 gp1_blocks[31:0] (.a(a), .b(b), .g(gen_signal), .p(propagate));
+
 
 generate
     genvar i;
-    for (i = 0; i < 32; i = i + 1) begin : gp1_blocks
-        gp1 gp1_instance(
-            .a(a[i]),       // Connect to the ith bit of a
-            .b(b[i]),       // Connect to the ith bit of b
-            .g(gen_signal[i]), // Connect to the ith bit of gen_signal
-            .p(propagate[i]) // Connect to the ith bit of propagate
+    for (i = 0; i < 32; i = i + 1) begin : gp1_instances
+        gp1 gp1_block(
+            .a(a[i]),       
+            .b(b[i]),       
+            .g(gen_signal[i]), 
+            .p(propagate[i]) 
         );
     end
 endgenerate
+
 
 gp8 module1(.gin(gen_signal[7:0]), .pin(propagate[7:0]), .cin(cin),
     .gout(gen_mid[0]), .pout(prop_mid[0]), .cout(carry[6:0]));
@@ -110,8 +112,9 @@ gp8 module3(.gin(gen_signal[23:16]), .pin(propagate[23:16]), .cin(carry_mid[1]),
 gp8 module4(.gin(gen_signal[31:24]), .pin(propagate[31:24]), .cin(carry_mid[2]),
     .gout(gen_mid[3]), .pout(prop_mid[3]), .cout(carry[30:24]));
 
-gp4 module5(.gin(generate_mid), .pin(propagate_mid), .cin(cin),
-    .gout(generate_output_mid), .pout(propagate_output_mid), .cout(carry_mid));
+
+gp4 module5(.gin(gen_mid), .pin(prop_mid), .cin(cin),
+    .gout(gen_out_mid), .pout(prop_out_mid), .cout(carry_mid));
 
 assign carry[7] = carry_mid[0];
 assign carry[15] = carry_mid[1];
