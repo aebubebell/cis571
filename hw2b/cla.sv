@@ -40,7 +40,7 @@ module gp8(input wire [7:0] gin, pin,
            output wire [6:0] cout);
 wire carry1, carry2, carry3, carry4, carry5, carry6, carry7;
 
-// Redefine carry computations with alternative expressions and variable names
+
 assign carry1 = gin[0] | (cin & pin[0]);
 assign carry2 = gin[1] | (carry1 & pin[1]);
 assign carry3 = gin[2] | (carry2 & pin[2]);
@@ -49,7 +49,6 @@ assign carry5 = gin[4] | (carry4 & pin[4]);
 assign carry6 = gin[5] | (carry5 & pin[5]);
 assign carry7 = gin[6] | (carry6 & pin[6]);
 
-// Assign carries to cout with reordered assignments
 assign cout[0] = carry1;
 assign cout[1] = carry2;
 assign cout[2] = carry3;
