@@ -30,55 +30,92 @@ module gp8(input wire [7:0] gin, pin,
            output wire gout, pout,
            output wire [6:0] cout);  // Assuming cout is 7 bits for 8-bit gp calculation
 
-    wire [7:0] c_internal;  // Assuming 8 bits to include cin and carry calculations
-    assign c_internal[0] = cin;
+    wire [7:0] carry_out;
+    wire [7:0] gen_modified;
 
-    // Correcting bit slice and loop logic based on provided structure
-    genvar i;
-    generate
-        for (i = 0; i < 7; i = i + 1) begin
-            assign c_internal[i + 1] = gin[i] | (pin[i] & c_internal[i]);
-        end
-    endgenerate
 
-    assign cout = c_internal[1:7];  // Adjusted assuming c_internal[0] is cin and not part of cout
+assign carry_out = {gin[6] | (pin[6] & carry_out[5]),
+                    gin[5] | (pin[5] & carry_out[4]),
+                    gin[4] | (pin[4] & carry_out[3]),
+                    gin[3] | (pin[3] & carry_out[2]),
+                    gin[2] | (pin[2] & carry_out[1]),
+                    gin[1] | (pin[1] & carry_out[0]),
+                    gin[0] | (pin[0] & cin),
+                    1'b0}; // The last bit is dummy for alignment
 
-    assign pout = &pin[0:7];  // Correct if intending to AND all propagate signals
-    // Compute gout based on the provided logic, ensuring proper bit range and logic
+
+assign cout = carry_out[6:0];
+
+
+assign pout = pin[0] && pin[1] && pin[2] && pin[3] && pin[4] && pin[5] && pin[6] && pin[7];
+
+
+integer j;
+always @(*) begin
+    gen_modified[7] = gin[7]; // Direct assignment for the highest bit
+    for (j = 6; j >= 0; j = j - 1) begin
+        gen_modified[j] = gin[j] && (&pin[j + 1:7]); 
+    end
+end
+
+
+assign gout = |gen_modified;
 endmodule
 
 
 // 
 module cla(input wire [31:0] a, b, input wire cin, output wire [31:0] sum);
-    wire [31:0] g, p;
-    wire [3:0] g_inter, p_inter; 
-    wire [2:0] c_inter; 
-    wire gout_inter, pout_inter; 
-    wire [31:0] c; 
-    // Instantiate gp1 modules for generate and propagate signals
-    genvar i;
-    generate
-        for (i = 0; i < 32; i = i + 1) begin
-            gp1 gp1_inst(.a(a[i]), .b(b[i]), .g(g[i]), .p(p[i]));
-        end
-    endgenerate
+    wire [31:0] gen_signals, prop_signals, carry_signals;
+wire [3:0] gen_partial, prop_partial;
+wire [2:0] carry_partial;
+wire carry_out, prop_out;
+genvar idx;
 
-    // Instantiate gp8 modules for 8-bit segments of the operand
-    gp8 m1(.gin(g[7:0]), .pin(p[7:0]), .cin(cin), .gout(g_inter[0]), .pout(p_inter[0]), .cout(c[6:0]));
-    gp8 m2(.gin(g[15:8]), .pin(p[15:8]), .cin(c[7]), .gout(g_inter[1]), .pout(p_inter[1]), .cout(c[14:8]));
-    gp8 m3(.gin(g[23:16]), .pin(p[23:16]), .cin(c[15]), .gout(g_inter[2]), .pout(p_inter[2]), .cout(c[22:16]));
-    gp8 m4(.gin(g[31:24]), .pin(p[31:24]), .cin(c[23]), .gout(g_inter[3]), .pout(p_inter[3]), .cout(c[30:24]));
+// Instantiate gp1 for each bit
+generate
+    for (idx = 0; idx < 32; idx++) begin : gp1_block
+        gp1 unit(.a(a[idx]), .b(b[idx]), .g(gen_signals[idx]), .p(prop_signals[idx]));
+    end
+endgenerate
 
-    // Corrected: Assign carries between 8-bit segments directly
-    assign c[7] = c[7]; // Redundant but illustrates the carry flow
-    assign c[15] = c[14];
-    assign c[23] = c[22];
+// Processing blocks using gp8
+gp8 block1(
+    .gin(gen_signals[7:0]), .pin(prop_signals[7:0]), .cin(cin),
+    .gout(gen_partial[0]), .pout(prop_partial[0]), .cout(carry_signals[6:0])
+);
 
-    // Calculate sum bits
-    assign sum[0] = a[0] ^ b[0] ^ cin; // Direct calculation for the first bit
-    generate
-        for (i = 1; i < 32; i = i + 1) begin
-            assign sum[i] = a[i] ^ b[i] ^ c[i-1]; // Use previous carry for each bit
-        end
-    endgenerate
+gp8 block2(
+    .gin(gen_signals[15:8]), .pin(prop_signals[15:8]), .cin(carry_partial[0]),
+    .gout(gen_partial[1]), .pout(prop_partial[1]), .cout(carry_signals[14:8])
+);
+
+gp8 block3(
+    .gin(gen_signals[23:16]), .pin(prop_signals[23:16]), .cin(carry_partial[1]),
+    .gout(gen_partial[2]), .pout(prop_partial[2]), .cout(carry_signals[22:16])
+);
+
+gp8 block4(
+    .gin(gen_signals[31:24]), .pin(prop_signals[31:24]), .cin(carry_partial[2]),
+    .gout(gen_partial[3]), .pout(prop_partial[3]), .cout(carry_signals[30:24])
+);
+
+// Intermediate carry handling
+gp4 inter_handler(
+    .gin(gen_partial), .pin(prop_partial), .cin(cin),
+    .gout(carry_out), .pout(prop_out), .cout(carry_partial)
+);
+
+// Direct assignments for certain carries
+assign carry_signals[7] = carry_partial[0];
+assign carry_signals[15] = carry_partial[1];
+assign carry_signals[23] = carry_partial[2];
+
+// Sum calculation loop
+assign sum[0] = a[0] ^ b[0] ^ cin;
+generate
+    for (idx = 1; idx < 32; idx++) begin : sum_calculation
+        assign sum[idx] = a[idx] ^ b[idx] ^ carry_signals[idx - 1];
+    end
+endgenerate
+
 endmodule
