@@ -41,7 +41,7 @@ module gp8(input wire [7:0] gin, pin,
     always @(*) begin
         assign gen_modified[7] = gin[7];
         for (j = 6; j >= 0; j = j - 1) begin
-            assign gen_modified[j] = gin[j] & (&pin[(j + 1):7]); 
+            assign gen_modified[j] = gin[j] & (&pin[7:(j + 1)]); 
         end
     end
     assign gout = |gen_modified;
