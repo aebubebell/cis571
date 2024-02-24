@@ -45,25 +45,27 @@ endmodule
 // 32-bit Carry Lookahead Adder
 module cla(input wire [31:0] a, b, input wire cin, output wire [31:0] sum);
     wire [31:0] g, p; // Generate and propagate signals for each bit
-    wire [31:0] c; // Carry signals, including carry-in and carry-out for each bit
+    wire [31:0] c;    // Carry signals, including carry-in and carry-out for each bit
 
-    // Generate and propagate signals computation
+    // Generate and propagate signals computation for each bit
     genvar i;
-    generate
-        for (i = 0; i < 32; i = i + 1) begin : gen_gp
-            gp1 gp_unit(.a(a[i]), .b(b[i]), .g(g[i]), .p(p[i]));
-        end
-    endgenerate
+    for (i = 0; i < 32; i = i + 1) begin
+        gp1 gp_unit(.a(a[i]), .b(b[i]), .g(g[i]), .p(p[i]));
+    end
 
-    // Initial carry-in
-    assign c[0] = cin;
+    // Compute carries for the entire 32-bit operand
+    assign c[0] = cin; // Initial carry-in
+    
+    wire dummy_gout[0:3]; // If gout is not utilized in your logic
+    wire dummy_pout[0:3]; // If pout is not utilized in your logic
 
-    // Sequentially compute carries for each 8-bit block
-    gp8 block0(.gin(g[7:0]), .pin(p[7:0]), .cin(c[0]), .gout(), .pout(), .cout(c[1:7]));
-    gp8 block1(.gin(g[15:8]), .pin(p[15:8]), .cin(c[8]), .gout(), .pout(), .cout(c[9:15]));
-    gp8 block2(.gin(g[23:16]), .pin(p[23:16]), .cin(c[16]), .gout(), .pout(), .cout(c[17:23]));
-    gp8 block3(.gin(g[31:24]), .pin(p[31:24]), .cin(c[24]), .gout(), .pout(), .cout(c[25:31]));
+    gp8 block0(.gin(g[7:0]), .pin(p[7:0]), .cin(cin), .gout(dummy_gout[0]), .pout(dummy_pout[0]), .cout(c[1:7]));
+    gp8 block1(.gin(g[15:8]), .pin(p[15:8]), .cin(c[8]), .gout(dummy_gout[1]), .pout(dummy_pout[1]), .cout(c[9:15]));
+    gp8 block2(.gin(g[23:16]), .pin(p[23:16]), .cin(c[16]), .gout(dummy_gout[2]), .pout(dummy_pout[2]), .cout(c[17:23]));
+    gp8 block3(.gin(g[31:24]), .pin(p[31:24]), .cin(c[24]), .gout(dummy_gout[3]), .pout(dummy_pout[3]), .cout(c[25:31]));
 
-    // Sum computation
-    assign sum = a ^ b ^ c;
+    // Final sum calculation
+    for (i = 0; i < 32; i = i + 1) begin
+        assign sum[i] = a[i] ^ b[i] ^ c[i];
+    end
 endmodule
