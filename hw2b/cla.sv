@@ -38,42 +38,35 @@ module gp8(input wire [7:0] gin, pin,
            input wire cin,
            output wire gout, pout,
            output wire [6:0] cout);
-wire carry1, carry2, carry3, carry4, carry5, carry6, carry7;
 
+    wire [6:0] inter_carry;
 
-assign carry1 = gin[0] | (cin & pin[0]);
-assign carry2 = gin[1] | (carry1 & pin[1]);
-assign carry3 = gin[2] | (carry2 & pin[2]);
-assign carry4 = gin[3] | (carry3 & pin[3]);
-assign carry5 = gin[4] | (carry4 & pin[4]);
-assign carry6 = gin[5] | (carry5 & pin[5]);
-assign carry7 = gin[6] | (carry6 & pin[6]);
+    // Simplify carry calculation without using a generate block
+    assign inter_carry[0] = gin[0] | (cin & pin[0]);
+    assign inter_carry[1] = gin[1] | (inter_carry[0] & pin[1]);
+    assign inter_carry[2] = gin[2] | (inter_carry[1] & pin[2]);
+    assign inter_carry[3] = gin[3] | (inter_carry[2] & pin[3]);
+    assign inter_carry[4] = gin[4] | (inter_carry[3] & pin[4]);
+    assign inter_carry[5] = gin[5] | (inter_carry[4] & pin[5]);
+    assign inter_carry[6] = gin[6] | (inter_carry[5] & pin[6]);
 
-assign cout[0] = carry1;
-assign cout[1] = carry2;
-assign cout[2] = carry3;
-assign cout[3] = carry4;
-assign cout[4] = carry5;
-assign cout[5] = carry6;
-assign cout[6] = carry7;
+    assign cout = inter_carry;
 
-
-assign pout = &pin;
-
-
-wire [7:0] new_g;
-assign new_g[7] = gin[7];
-
-genvar j;
-for (j = 6; j >= 0; j = j - 1) begin
     
-    assign new_g[j] = gin[j] & &pin[7:j+1];
-end
+    assign pout = &pin;
 
-// Assign gout using the newly defined new_g
-assign gout = |new_g;
+    
+    assign gout = gin[7] | 
+                  (gin[6] & pin[7]) | 
+                  (gin[5] & pin[7] & pin[6]) | 
+                  (gin[4] & pin[7] & pin[6] & pin[5]) | 
+                  (gin[3] & pin[7] & pin[6] & pin[5] & pin[4]) | 
+                  (gin[2] & pin[7] & pin[6] & pin[5] & pin[4] & pin[3]) | 
+                  (gin[1] & pin[7] & pin[6] & pin[5] & pin[4] & pin[3] & pin[2]) | 
+                  (gin[0] & pin[7] & pin[6] & pin[5] & pin[4] & pin[3] & pin[2] & pin[1]);
 
 endmodule
+
 
 module cla
   (input wire [31:0]  a, b,
