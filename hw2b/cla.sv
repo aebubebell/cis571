@@ -28,23 +28,21 @@ endmodule
 module gp8(input wire [7:0] gin, pin,
            input wire cin,
            output wire gout, pout,
-           output wire [6:0] cout);
+           output wire [6:0] cout); // Ensure cout's width is correctly declared
 
-    wire [7:0] c_internal;
+    wire [7:0] c_internal; // Intermediate carry signals within gp8
     assign c_internal[0] = cin;
-    assign c_internal[1] = gin[0] | (pin[0] & c_internal[0]);
-    // Corrected loop 
+
     genvar i;
     generate
-        for (i = 1; i < 7; i = i + 1) begin : loop
+        for (i = 0; i < 7; i = i + 1) begin : gp8_carry_calc
             assign c_internal[i + 1] = gin[i] | (pin[i] & c_internal[i]);
         end
     endgenerate
 
-    assign cout = c_internal[1:7]; // Correctly assign the internal carries to cout
-
+    assign cout = c_internal[1:7]; // Correctly assign to cout with appropriate range
     assign gout = gin[7] | (pin[7] & c_internal[7]);
-    assign pout = &pin; // AND all propagate signals together
+    assign pout = &pin;
 endmodule
 
 
@@ -71,15 +69,14 @@ module cla(input wire [31:0] a, b,
     gp8 gp8_inst2(.gin(g[23:16]), .pin(p[23:16]), .cin(cout8[1]), .gout(g8[2]), .pout(p8[2]), .cout(cout8[2]));
     gp8 gp8_inst3(.gin(g[31:24]), .pin(p[31:24]), .cin(cout8[2]), .gout(g8[3]), .pout(p8[3]), .cout(cout8[3]));
 
-    // Calculate carry for the entire 32-bit operation, ensuring c[0] is cin
-    assign c[0] = cin;
-    
-    // Intermediate carries within 8-bit segments should be properly calculated
+    // Address GENUNNAMED by naming generate blocks and correcting carry logic
     generate
-        for (i = 1; i < 32; i = i + 1) begin : carry_gen
-            if (i % 8 == 0) begin
-                assign c[i] = cout8[i/8-1]; // Use cout8 from gp8 instances for carries at 8, 16, 24
-            end else begin
+        for (i = 0; i < 32; i = i + 1) begin : carry_logic
+            if (i % 8 == 0) begin : if_block
+                if (i > 0) begin
+                    assign c[i] = cout8[i/8-1]; // Use cout8 from gp8 instances for carries at 8, 16, 24
+                end
+            end else begin : else_block
                 assign c[i] = g[i-1] | (p[i-1] & c[i-1]); // Calculate intermediate carries based on generate and propagate
             end
         end
@@ -87,7 +84,7 @@ module cla(input wire [31:0] a, b,
 
     // Calculate sum
     generate
-        for (i = 0; i < 32; i = i + 1) begin : sum_gen
+        for (i = 0; i < 32; i = i + 1) begin : sum_calculation
             assign sum[i] = a[i] ^ b[i] ^ c[i];
         end
     endgenerate
