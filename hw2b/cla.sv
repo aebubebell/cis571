@@ -55,11 +55,13 @@ module cla(
     wire [7:0] g8, p8;
     wire [3:0] cout8;
 
+    // Declare genvar outside of generate block
+    genvar i;
+
     // Instantiate gp1 modules for each bit
-    genvar bit;
     generate
-        for (bit = 0; bit < 32; bit = bit + 1) begin : gp1_instances
-            gp1 gp1_inst(.a(a[bit]), .b(b[bit]), .g(g[bit]), .p(p[bit]));
+        for (i = 0; i < 32; i = i + 1) begin : gp1_instances
+            gp1 gp1_inst(.a(a[i]), .b(b[i]), .g(g[i]), .p(p[i]));
         end
     endgenerate
 
@@ -69,13 +71,13 @@ module cla(
     gp8 gp8_inst2(.gin(g[23:16]), .pin(p[23:16]), .cin(cout8[1]), .gout(g8[2]), .pout(p8[2]), .cout(cout8[2]));
     gp8 gp8_inst3(.gin(g[31:24]), .pin(p[31:24]), .cin(cout8[2]), .gout(g8[3]), .pout(p8[3]), .cout(cout8[3]));
 
-    // Correct
+    // Correct carry generation with named blocks
     generate
-        for (bit = 1; bit < 32; bit = bit + 1) begin : carry_calculation
-            if (bit % 8 == 0) begin : block_carry_boundary
-                assign c[bit] = cout8[bit/8-1];
+        for (i = 1; i < 32; i = i + 1) begin : carry_logic
+            if (i % 8 == 0) begin : block_carry_boundary
+                assign c[i] = cout8[i/8-1];
             end else begin : block_carry_internal
-                assign c[bit] = g[bit-1] | (p[bit-1] & c[bit-1]);
+                assign c[i] = g[i-1] | (p[i-1] & c[i-1]);
             end
         end
     endgenerate
@@ -84,8 +86,8 @@ module cla(
 
     // Calculate sum
     generate
-        for (bit = 0; bit < 32; bit = bit + 1) begin : sum_calc
-            assign sum[bit] = a[bit] ^ b[bit] ^ c[bit];
+        for (i = 0; i < 32; i = i + 1) begin : sum_calculation
+            assign sum[i] = a[i] ^ b[i] ^ c[i];
         end
     endgenerate
 
