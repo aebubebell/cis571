@@ -98,17 +98,17 @@ generate
     end
 endgenerate
 
-gp8 module1(.gin(generate[7:0]), .pin(propagate[7:0]), .cin(cin),
-    .gout(generate_mid[0]), .pout(propagate_mid[0]), .cout(carry[6:0]));
+gp8 module1(.gin(gen_signal[7:0]), .pin(propagate[7:0]), .cin(cin),
+    .gout(gen_mid[0]), .pout(prop_mid[0]), .cout(carry[6:0]));
 
-gp8 module2(.gin(generate[15:8]), .pin(propagate[15:8]), .cin(carry_mid[0]),
-    .gout(generate_mid[1]), .pout(propagate_mid[1]), .cout(carry[14:8]));
+gp8 module2(.gin(gen_signal[15:8]), .pin(propagate[15:8]), .cin(carry_mid[0]),
+    .gout(gen_mid[1]), .pout(prop_mid[1]), .cout(carry[14:8]));
 
-gp8 module3(.gin(generate[23:16]), .pin(propagate[23:16]), .cin(carry_mid[1]),
-    .gout(generate_mid[2]), .pout(propagate_mid[2]), .cout(carry[22:16]));
+gp8 module3(.gin(gen_signal[23:16]), .pin(propagate[23:16]), .cin(carry_mid[1]),
+    .gout(gen_mid[2]), .pout(prop_mid[2]), .cout(carry[22:16]));
 
-gp8 module4(.gin(generate[31:24]), .pin(propagate[31:24]), .cin(carry_mid[2]),
-    .gout(generate_mid[3]), .pout(propagate_mid[3]), .cout(carry[30:24]));
+gp8 module4(.gin(gen_signal[31:24]), .pin(propagate[31:24]), .cin(carry_mid[2]),
+    .gout(gen_mid[3]), .pout(prop_mid[3]), .cout(carry[30:24]));
 
 gp4 module5(.gin(generate_mid), .pin(propagate_mid), .cin(cin),
     .gout(generate_output_mid), .pout(propagate_output_mid), .cout(carry_mid));
