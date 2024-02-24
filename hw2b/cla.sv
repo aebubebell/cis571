@@ -76,6 +76,10 @@ assign gout = |new_g;
 
 endmodule
 
+module cla
+  (input wire [31:0]  a, b,
+   input wire         cin,
+   output wire [31:0] sum);
 wire [31:0] gen_signal, propagate, carry;
 wire [3:0] gen_mid, prop_mid;
 wire [2:0] carry_mid;
@@ -118,4 +122,4 @@ assign sum[0] = a[0] ^ b[0] ^ cin;
 for (j = 1; j < 32; j++) begin
     assign sum[j] = a[j] ^ b[j] ^ carry[j - 1];
 end
-
+endmodule
