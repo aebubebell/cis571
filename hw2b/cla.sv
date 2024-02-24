@@ -76,11 +76,12 @@ assign gout = |new_g;
 
 endmodule
 
-wire [31:0] generate, propagate, carry;
-wire [3:0] generate_mid, propagate_mid;
+wire [31:0] gen_signal, propagate, carry;
+wire [3:0] gen_mid, prop_mid;
 wire [2:0] carry_mid;
-wire generate_output_mid, propagate_output_mid;
-gp1 gp1_blocks[31:0] (.a(a), .b(b), .g(generate), .p(propagate));
+wire gen_out_mid, prop_out_mid;
+gp1 gp1_blocks[31:0] (.a(a), .b(b), .g(gen_signal), .p(propagate));
+
 
 gp8 module1(.gin(generate[7:0]), .pin(propagate[7:0]), .cin(cin),
     .gout(generate_mid[0]), .pout(propagate_mid[0]), .cout(carry[6:0]));
