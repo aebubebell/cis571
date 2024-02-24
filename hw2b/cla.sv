@@ -39,13 +39,14 @@ module gp8(input wire [7:0] gin, pin,
     assign pout = pin[0] && pin[1] && pin[2] && pin[3] && pin[4] && pin[5] && pin[6] && pin[7];
     integer j;
     always @* begin
-    for (j = 0; j < 8; j = j + 1) begin
-        if (j == 7) begin
-            gen_modified[j] = gin[j];
-        else begin
-            gen_modified[j] = (gin[j] && pin[7:j]);
-        end
+  for (j = 0; j < 8; j = j + 1) begin
+    if (j == 7) begin
+      gen_modified[j] = gin[j];
     end
+    else begin
+      gen_modified[j] = (gin[j] && pin[7:j]);
+    end
+  end
 end
 
     assign gout = |gen_modified;
