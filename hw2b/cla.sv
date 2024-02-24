@@ -35,13 +35,13 @@ module gp8(input wire [7:0] gin, pin,
                         gin[1] | (pin[1] & carry_out[0]),
                         gin[0] | (pin[0] & cin),
                         1'b0};
-    assign cout = carry_out[6:0];
+    //assign cout = carry_out[6:0];
     assign pout = pin[0] && pin[1] && pin[2] && pin[3] && pin[4] && pin[5] && pin[6] && pin[7];
     integer j;
     always @(*) begin
-        gen_modified[7] = gin[7];
+        assign gen_modified[7] = gin[7];
         for (j = 6; j >= 0; j = j - 1) begin
-            gen_modified[j] = gin[j] && (&pin[(j + 1):7]); 
+            assign gen_modified[j] = gin[j] & (&pin[(j + 1):7]); 
         end
     end
     assign gout = |gen_modified;
