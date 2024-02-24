@@ -65,38 +65,87 @@ endmodule
 
 // 
 module cla(
-    input wire [7:0] gin, pin,
+    input wire [31:0] a, b,
     input wire cin,
-    output wire [6:0] cout,
-    output wire gout, pout
+    output wire [31:0] sum
 );
-    wire [7:0] c_internal; // Intermediate carries
-    wire [7:0] gen_modified; // Modified generate signals
+    wire [31:0] g, p, c;
+    wire [3:0] g_inter, p_inter;
+    wire [2:0] c_inter;
+    wire gout_inter, pout_inter;
+    gp1 gp1s[31:0](.a(a), .b(b), .g(g), .p(p));
+
+    gp8 m1(
+        .gin(g[7:0]), 
+        .pin(p[7:0]), 
+        .cin(cin),
+        .gout(g_inter[0]), 
+        .pout(p_inter[0]), 
+        .cout(c[6:0])
+    );
+
+    gp8 m2(
+        .gin(g[15:8]), 
+        .pin(p[15:8]), 
+        .cin(c_inter[0]),
+        .gout(g_inter[1]), 
+        .pout(p_inter[1]), 
+        .cout(c[14:8])
+    );
+
+    gp8 m3(
+        .gin(g[23:16]), 
+        .pin(p[23:16]), 
+        .cin(c_inter[1]),
+        .gout(g_inter[2]), 
+        .pout(p_inter[2]), 
+        .cout(c[22:16])
+    );
+
+    gp8 m4(
+        .gin(g[31:24]), 
+        .pin(p[31:24]), 
+        .cin(c_inter[2]),
+        .gout(g_inter[3]), 
+        .pout(p_inter[3]), 
+        .cout(c[30:24])
+    );
+
+    gp4 m5(
+        .gin(g_inter), 
+        .pin(p_inter), 
+        .cin(cin),
+        .gout(gout_inter), 
+        .pout(pout_inter), 
+        .cout(c_inter)
+    );
+
+    // Correcting the carry assignments to match the gp8 module outputs
+    assign c[7] = c_inter[0];
+    assign c[15] = c_inter[1];
+    assign c[23] = c_inter[2];
+
     
-    // Initial carry calculation
-    assign c_internal[0] = cin;
-    
-    // Corrected logic for calculating intermediate carries and modified generate signals
+    wire [7:0] gen_modified; // Assuming this needs correction based on the original context
     genvar j;
     generate
-        for (j = 0; j < 8; j = j + 1) begin : gen_for_each_bit
-            if (j == 0) begin
-                // For the first bit, no previous carry, so directly use cin
-                assign gen_modified[j] = gin[j] | (pin[j] & cin);
+        for (j = 0; j < 8; j = j + 1) begin : gen_logic
+            if (j < 7) begin
+                // Correcting the logic to avoid dynamic slicing error and SELRANGE warning
+                assign gen_modified[j] = gin[j] & (&pin[j+1:7]);
             end else begin
-                // For subsequent bits, use the previous carry in the chain
-                assign c_internal[j] = gin[j-1] | (pin[j-1] & c_internal[j-1]);
-                assign gen_modified[j] = gin[j] | (pin[j] & c_internal[j]);
+                // Handling the last bit separately as there's no pin[j+1:7] for j=7
+                assign gen_modified[7] = gin[7]; // Adjust based on actual intent
             end
         end
     endgenerate
-    
-    // Assigning intermediate carries to cout
-    assign cout = c_internal[1:7];
-    
-    // Calculating overall propagate and generate out signals
-    assign pout = &pin; // Propagate out is AND of all propagate inputs
-    assign gout = |gen_modified; // Generate out is OR of all modified generate signals
 
-    // Sum calculation not shown, assuming it follows similar corrections as needed
+    // Sum calc
+    assign sum[0] = a[0] ^ b[0] ^ cin;
+    generate
+        for (j = 1; j < 32; j = j + 1) begin : sum_logic
+            assign sum[j] = a[j] ^ b[j] ^ c[j-1];
+        end
+    endgenerate
+
 endmodule
