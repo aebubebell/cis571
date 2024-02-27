@@ -24,9 +24,23 @@ module RegFile (
   localparam int NumRegs = 32;
   logic [`REG_SIZE] regs[NumRegs];
 
-  // TODO: your code here
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      for (int i = 0; i < NumRegs; i++) begin
+        regs[i] <= 0;
+      end
+    end else if (we && rd != 0) begin
+      regs[rd] <= rd_data;
+    end
+  end
+
+  always_comb begin
+    rs1_data = regs[rs1];
+    rs2_data = regs[rs2];
+  end
 
 endmodule
+
 
 module DatapathSingleCycle (
     input wire clk,
@@ -48,6 +62,16 @@ module DatapathSingleCycle (
   wire [2:0] insn_funct3;
   wire [4:0] insn_rd;
   wire [`OPCODE_SIZE] insn_opcode;
+
+
+  logic rf_we; // Register file write enable
+  logic [31:0] rf_wdata; // Data to write to register file
+  logic branch_taken; // Branch decision
+  logic pc_update_request; // Program counter update request
+  logic [31:0] pc_update_value; // Value to update the program counter with
+  logic system_call_request; // System call request signal
+  logic [31:0] rs1_data, rs2_data; // Data from source registers
+  logic [31:0] current_pc; // Current program counter value
 
   // split R-type instruction - see section 2.2 of RiscV spec
   assign {insn_funct7, insn_rs2, insn_rs1, insn_funct3, insn_rd, insn_opcode} = insn_from_imem;
@@ -146,6 +170,10 @@ module DatapathSingleCycle (
   wire insn_ecall = insn_opcode == OpEnviron && insn_from_imem[31:7] == 25'd0;
   wire insn_fence = insn_opcode == OpMiscMem;
 
+  wire [31:0] lui_imm = {insn_from_imem[31:12], 12'b0};
+
+  wire [31:0] add_result, sub_result, addi_result, sll_result, slt_result, sltu_result, srl_result, sra_result, xor_result, or_result, and_result;
+
   // synthesis translate_off
   // this code is only for simulation, not synthesis
   `include "RvDisassembler.sv"
@@ -188,15 +216,194 @@ module DatapathSingleCycle (
 
   logic illegal_insn;
 
+  // Instantiate the RegFile module
+  RegFile rf (
+    .rd(insn_rd),                  // assuming insn_rd is the destination register ID
+    .rd_data(rf_wdata),            // data to be written into the register file
+    .rs1(insn_rs1),                // source register 1 ID
+    .rs1_data(rs1_data),           // data read from source register 1
+    .rs2(insn_rs2),                // source register 2 ID
+    .rs2_data(rs2_data),           // data read from source register 2
+    .clk(clk),                     // clock signal
+    .we(rf_we),                    // write enable signal
+    .rst(rst)                      // reset signal
+  );
+
+  cla cla_add(.a(rs1_data), .b(rs2_data), .cin(0), .sum(add_result));
+  cla cla_sub(.a(rs1_data), .b(rs2_data), .cin(1), .sum(sub_result));
+  cla cla_addi(.a(rs1_data), .b(imm_i_sext), .cin(0), .sum(addi_result));
+  cla cla_sll(.a(rs1_data), .b({rs2_data[4:0], 27'b0}), .cin(0), .sum(sll_result));
+  cla cla_slt(.a(rs1_data), .b(rs2_data), .cin(0), .sum(slt_result));
+  cla cla_sltu(.a(rs1_data), .b(rs2_data), .cin(0), .sum(sltu_result));
+  cla cla_srl(.a(rs1_data), .b({rs2_data[4:0], 27'b0}), .cin(0), .sum(srl_result));
+  cla cla_sra(.a(rs1_data), .b({rs2_data[4:0], 27'b0}), .cin(0), .sum(sra_result));
+  cla cla_xor(.a(rs1_data), .b(rs2_data), .cin(0), .sum(xor_result));
+  cla cla_or(.a(rs1_data), .b(rs2_data), .cin(0), .sum(or_result));
+  cla cla_and(.a(rs1_data), .b(rs2_data), .cin(0), .sum(and_result));
+
   always_comb begin
     illegal_insn = 1'b0;
+    rf_we = 1'b0; 
+    rf_wdata = 32'b0;
+    branch_taken = 1'b0; // Signal to indicate if branch is taken
+    pc_update_request = 1'b0; // Request to update the program counter
+    pc_update_value = 32'b0; // New value for the program counter if branch is taken
+    system_call_request = 1'b0; // Signal to indicate a system call request
+    // branch_offset = 32'sd0;
+    halt = 0;
+    pcNext = pcCurrent + 4;
 
     case (insn_opcode)
       OpLui: begin
         // TODO: start here by implementing lui
+        rf_we = 1'b1;
+        rf_wdata = lui_imm;
+      end
+      OpRegImm: begin
+        case (insn_funct3)
+          3'b000: begin // ADDI
+            rf_we = 1'b1;
+            rf_wdata = addi_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b010: begin // SLTI
+            rf_we = 1'b1;
+            rf_wdata = $signed(rs1_data) < $signed(imm_i_sext) ? 32'b1 : 32'b0;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b011: begin // SLTIU
+            rf_we = 1'b1;
+            rf_wdata = rs1_data < imm_i_sext ? 32'b1 : 32'b0;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b100: begin // XORI
+            rf_we = 1'b1;
+            rf_wdata = rs1_data ^ imm_i_sext;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b110: begin // ORI
+            rf_we = 1'b1;
+            rf_wdata = rs1_data | imm_i_sext;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b111: begin // ANDI
+            rf_we = 1'b1;
+            rf_wdata = rs1_data & imm_i_sext;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b001: begin // SLLI
+            rf_we = 1'b1;
+            rf_wdata = rs1_data << imm_i_sext[4:0]; 
+            // pcNext = pcCurrent + 4;
+          end
+          3'b101: begin
+            if (imm_i_sext[10] == 1'b0) begin // SRLI
+              rf_we = 1'b1;
+              rf_wdata = rs1_data >> imm_i_sext[4:0]; 
+              // pcNext = pcCurrent + 4;
+            end else begin // SRAI
+              rf_we = 1'b1;
+              rf_wdata = rs1_data >>> imm_i_sext[4:0];
+              // pcNext = pcCurrent + 4;
+            end
+          end
+          default: 
+            illegal_insn = 1'b1;
+        endcase
+      end
+      OpRegReg: begin
+        case (insn_funct3)
+          3'b000: begin 
+            if (insn_opcode == 7'b010) begin // SUB
+              rf_we = 1'b1;
+              rf_wdata = sub_result;
+            end else begin // ADD
+              rf_we = 1'b1;
+              rf_wdata = add_result;
+            end
+            // pcNext = pcCurrent + 4;
+          end
+          3'b001: begin // SLL
+            rf_we = 1'b1;
+            rf_wdata = sll_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b010: begin // SLT
+            rf_we = 1'b1;
+            rf_wdata = slt_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b011: begin // SLTU
+            rf_we = 1'b1;
+            rf_wdata = sltu_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b100: begin // XOR
+            rf_we = 1'b1;
+            rf_wdata = xor_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b101: begin 
+            if (insn_from_imem[30] == 0) begin // SRL
+              rf_we = 1'b1;
+              rf_wdata = srl_result;
+              // pcNext = pcCurrent + 4;
+            end else begin // SRA
+              rf_we = 1'b1;
+              rf_wdata = sra_result;
+              // pcNext = pcCurrent + 4;
+            end
+          end
+          3'b110: begin // OR
+            rf_we = 1'b1;
+            rf_wdata = or_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b111: begin // AND
+            rf_we = 1'b1;
+            rf_wdata = and_result;
+            // pcNext = pcCurrent + 4;
+          end
+        endcase
+      end
+      OpBranch: begin
+        // Branch instructions
+        case (insn_funct3)
+          3'b000: begin // BEQ
+            branch_taken = (rs1_data == rs2_data);
+          end
+          3'b001: begin // BNE
+            branch_taken = (rs1_data != rs2_data);
+          end
+          3'b100: begin // BLT
+            branch_taken = $signed(rs1_data) < $signed(rs2_data);
+          end
+          3'b101: begin // BGE
+            branch_taken = $signed(rs1_data) >= $signed(rs2_data);
+          end
+          3'b110: begin // BLTU
+            branch_taken = (rs1_data < rs2_data);
+          end
+          3'b111: begin // BGEU
+            branch_taken = (rs1_data >= rs2_data);
+          end
+          default: 
+            illegal_insn = 1'b1;
+        endcase
+        if (branch_taken) begin
+          pc_update_request = 1'b1;
+          pcNext = pcCurrent + 4;
+        end else begin
+          pc_update_request = 1'b0; 
+        end
+      end
+      OpEnviron: begin
+        halt = 1;
+        pcNext = pcCurrent + 4;
       end
       default: begin
         illegal_insn = 1'b1;
+        // pcNext = pcCurrent + 4;
       end
     endcase
   end
