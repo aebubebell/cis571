@@ -257,6 +257,21 @@ module DatapathSingleCycle (
         endcase
         rf_we = !illegal_insn;
       end
+        OpSystem: begin
+  if (insn_funct3 == 3'b000) begin
+    if (insn_funct7 == 7'b0000000) begin
+      // ecall
+      // Placeholder for handling ecall
+    end else if (insn_funct7 == 7'b0000001) begin
+      // ebreak
+      // Placeholder for handling ebreak
+    end else begin
+      illegal_insn = 1'b1;
+    end
+  end else begin
+    illegal_insn = 1'b1;
+  end
+end
 
       OpRegImm: begin
         unique case (insn_funct3)
