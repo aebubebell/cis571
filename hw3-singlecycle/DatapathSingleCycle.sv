@@ -171,7 +171,7 @@ module DatapathSingleCycle (
   wire insn_fence = insn_opcode == OpMiscMem;
 
   wire [31:0] lui_imm = {insn_from_imem[31:12], 12'b0};
-
+  
   wire [31:0] add_result, sub_result, addi_result, sll_result, slt_result, sltu_result, srl_result, sra_result, xor_result, or_result, and_result;
 
   // synthesis translate_off
@@ -261,17 +261,11 @@ module DatapathSingleCycle (
         endcase
         rf_we = !illegal_insn;
       end
-      OpSystem: begin
+      OpEnviron: begin
         if (insn_funct3 == 3'b000) begin
           if (insn_funct7 == 7'b0000000) begin
             // ecall
             halt = 1'b1;
-          end else if (insn_funct7 == 7'b0000001) begin
-            // ebreak
-            halt = 1'b1;
-          end else begin
-            illegal_insn = 1'b1;
-          end
         end else begin
           illegal_insn = 1'b1;
         end
