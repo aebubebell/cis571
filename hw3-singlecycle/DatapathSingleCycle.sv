@@ -216,17 +216,173 @@ module DatapathSingleCycle (
 
   logic illegal_insn;
 
+  logic [31:0] pc_plus_4;
+  assign pc_plus_4 = pcCurrent + 32'd4;
+
+  always_comb begin
+    rf_wdata = 32'b0;
+    rf_we = 1'b0;
+    pcNext = pc_plus_4;
+    illegal_insn = 1'b0;
+    branch_taken = 1'b0;
+    store_we_to_dmem = 4'b0000;
+    addr_to_dmem = 32'b0;
+    store_data_to_dmem = 32'b0;
+    halt = 1'b0;
+
+    unique case (insn_opcode)
+      OpRegReg: begin
+        unique case (insn_funct3)
+          3'b000: begin
+            if (insn_funct7 == 7'd0) begin
+              rf_wdata = add_result;
+            end else if (insn_funct7 == 7'b0100000) begin
+              rf_wdata = sub_result;
+            end else begin
+              illegal_insn = 1'b1;
+            end
+          end
+          3'b001: rf_wdata = sll_result;
+          3'b010: rf_wdata = slt_result;
+          3'b011: rf_wdata = sltu_result;
+          3'b100: rf_wdata = xor_result;
+          3'b101: begin
+            if (insn_funct7 == 7'd0) begin
+              rf_wdata = srl_result;
+            end else if (insn_funct7 == 7'b0100000) begin
+              rf_wdata = sra_result;
+            end else begin
+              illegal_insn = 1'b1;
+            end
+          end
+          3'b110: rf_wdata = or_result;
+          3'b111: rf_wdata = and_result;
+          default: illegal_insn = 1'b1;
+        endcase
+        rf_we = !illegal_insn;
+      end
+      OpSystem: begin
+        if (insn_funct3 == 3'b000) begin
+          if (insn_funct7 == 7'b0000000) begin
+            // ecall
+            halt = 1'b1;
+          end else if (insn_funct7 == 7'b0000001) begin
+            // ebreak
+            halt = 1'b1;
+          end else begin
+            illegal_insn = 1'b1;
+          end
+        end else begin
+          illegal_insn = 1'b1;
+        end
+      end
+      OpRegImm: begin
+        unique case (insn_funct3)
+          3'b000: rf_wdata = addi_result;
+          3'b010: rf_wdata = {{20{rs1_data[31]}}, rs1_data[31:20]}; // slti
+          3'b011: rf_wdata = {{20{1'b0}}, rs1_data[11:0]}; // sltiu
+          3'b100: rf_wdata = rs1_data ^ imm_i_sext; // xori
+          3'b110: rf_wdata = rs1_data | imm_i_sext; // ori
+          3'b111: rf_wdata = rs1_data & imm_i_sext; // andi
+          3'b001: rf_wdata = rs1_data << imm_shamt; // slli
+          3'b101: begin
+            if (insn_funct7 == 7'd0) begin
+              rf_wdata = rs1_data >> imm_shamt; // srli
+            end else if (insn_funct7 == 7'b0100000) begin
+              rf_wdata = $signed(rs1_data) >>> imm_shamt; // srai
+            end else begin
+              illegal_insn = 1'b1;
+            end
+          end
+          default: illegal_insn = 1'b1;
+        endcase
+        rf_we = !illegal_insn;
+      end
+      OpLui: begin
+        rf_wdata = lui_imm;
+        rf_we = 1'b1;
+      end
+      OpAuipc: begin
+        rf_wdata = pcCurrent + lui_imm;
+        rf_we = 1'b1;
+      end
+      OpJal: begin
+        rf_wdata = pc_plus_4;
+        pcNext = pcCurrent + imm_j_sext;
+        rf_we = 1'b1;
+      end
+      OpJalr: begin
+        rf_wdata = pc_plus_4;
+        pcNext = (rs1_data + imm_i_sext) & ~1;
+        rf_we = 1'b1;
+      end
+      OpBranch: begin
+        unique case (insn_funct3)
+          3'b000: branch_taken = rs1_data == rs2_data; // beq
+          3'b001: branch_taken = rs1_data != rs2_data; // bne
+          3'b100: branch_taken = $signed(rs1_data) < $signed(rs2_data); // blt
+          3'b101: branch_taken = $signed(rs1_data) >= $signed(rs2_data); // bge
+          3'b110: branch_taken = rs1_data < rs2_data; // bltu
+          3'b111: branch_taken = rs1_data >= rs2_data; // bgeu
+          default: illegal_insn = 1'b1;
+        endcase
+        if (branch_taken) begin
+          pcNext = pcCurrent + imm_b_sext;
+        end
+      end
+      OpLoad: begin
+        unique case (insn_funct3)
+          3'b000: rf_wdata = {{24{load_data_from_dmem[7]}}, load_data_from_dmem[7:0]}; // lb
+          3'b001: rf_wdata = {{16{load_data_from_dmem[15]}}, load_data_from_dmem[15:0]}; // lh
+          3'b010: rf_wdata = load_data_from_dmem; // lw
+          3'b100: rf_wdata = {{24{1'b0}}, load_data_from_dmem[7:0]}; // lbu
+          3'b101: rf_wdata = {{16{1'b0}}, load_data_from_dmem[15:0]}; // lhu
+          default: illegal_insn = 1'b1;
+        endcase
+        rf_we = !illegal_insn;
+        addr_to_dmem = rs1_data + imm_i_sext;
+      end
+      OpStore: begin
+        unique case (insn_funct3)
+          3'b000: begin
+            store_we_to_dmem = 4'b0001; // sb
+            store_data_to_dmem = {24'b0, rs2_data[7:0]};
+          end
+          3'b001: begin
+            store_we_to_dmem = 4'b0011; // sh
+            store_data_to_dmem = {16'b0, rs2_data[15:0]};
+          end
+          3'b010: begin
+            store_we_to_dmem = 4'b1111; // sw
+            store_data_to_dmem = rs2_data;
+          end
+          default: illegal_insn = 1'b1;
+        endcase
+        addr_to_dmem = rs1_data + imm_s_sext;
+      end
+      OpMiscMem: begin
+        // Treat fence as a no-op
+      end
+      default: illegal_insn = 1'b1;
+    endcase
+
+    // Halt on illegal instruction
+    if (illegal_insn) begin
+      halt = 1'b1;
+    end
+  end
+
   // Instantiate the RegFile module
   RegFile rf (
-    .rd(insn_rd),                  // assuming insn_rd is the destination register ID
-    .rd_data(rf_wdata),            // data to be written into the register file
-    .rs1(insn_rs1),                // source register 1 ID
-    .rs1_data(rs1_data),           // data read from source register 1
-    .rs2(insn_rs2),                // source register 2 ID
-    .rs2_data(rs2_data),           // data read from source register 2
-    .clk(clk),                     // clock signal
-    .we(rf_we),                    // write enable signal
-    .rst(rst)                      // reset signal
+    .rd(insn_rd),
+    .rd_data(rf_wdata),
+    .rs1(insn_rs1),
+    .rs1_data(rs1_data),
+    .rs2(insn_rs2),
+    .rs2_data(rs2_data),
+    .clk(clk),
+    .we(rf_we),
+    .rst(rst)
   );
 
   cla cla_add(.a(rs1_data), .b(rs2_data), .cin(0), .sum(add_result));
@@ -241,205 +397,22 @@ module DatapathSingleCycle (
   cla cla_or(.a(rs1_data), .b(rs2_data), .cin(0), .sum(or_result));
   cla cla_and(.a(rs1_data), .b(rs2_data), .cin(0), .sum(and_result));
 
-  always_comb begin
-    illegal_insn = 1'b0;
-    rf_we = 1'b0; 
-    rf_wdata = 32'b0;
-    branch_taken = 1'b0; // Signal to indicate if branch is taken
-    pc_update_request = 1'b0; // Request to update the program counter
-    pc_update_value = 32'b0; // New value for the program counter if branch is taken
-    system_call_request = 1'b0; // Signal to indicate a system call request
-    // branch_offset = 32'sd0;
-    halt = 0;
-    pcNext = pcCurrent + 4;
-
-    case (insn_opcode)
-      OpLui: begin
-        // TODO: start here by implementing lui
-        rf_we = 1'b1;
-        rf_wdata = lui_imm;
-      end
-      OpRegImm: begin
-        case (insn_funct3)
-          3'b000: begin // ADDI
-            rf_we = 1'b1;
-            rf_wdata = addi_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b010: begin // SLTI
-            rf_we = 1'b1;
-            rf_wdata = $signed(rs1_data) < $signed(imm_i_sext) ? 32'b1 : 32'b0;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b011: begin // SLTIU
-            rf_we = 1'b1;
-            rf_wdata = rs1_data < imm_i_sext ? 32'b1 : 32'b0;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b100: begin // XORI
-            rf_we = 1'b1;
-            rf_wdata = rs1_data ^ imm_i_sext;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b110: begin // ORI
-            rf_we = 1'b1;
-            rf_wdata = rs1_data | imm_i_sext;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b111: begin // ANDI
-            rf_we = 1'b1;
-            rf_wdata = rs1_data & imm_i_sext;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b001: begin // SLLI
-            rf_we = 1'b1;
-            rf_wdata = rs1_data << imm_i_sext[4:0]; 
-            // pcNext = pcCurrent + 4;
-          end
-          3'b101: begin
-            if (imm_i_sext[10] == 1'b0) begin // SRLI
-              rf_we = 1'b1;
-              rf_wdata = rs1_data >> imm_i_sext[4:0]; 
-              // pcNext = pcCurrent + 4;
-            end else begin // SRAI
-              rf_we = 1'b1;
-              rf_wdata = rs1_data >>> imm_i_sext[4:0];
-              // pcNext = pcCurrent + 4;
-            end
-          end
-          default: 
-            illegal_insn = 1'b1;
-        endcase
-      end
-      OpRegReg: begin
-        case (insn_funct3)
-          3'b000: begin 
-            if (insn_opcode == 7'b010) begin // SUB
-              rf_we = 1'b1;
-              rf_wdata = sub_result;
-            end else begin // ADD
-              rf_we = 1'b1;
-              rf_wdata = add_result;
-            end
-            // pcNext = pcCurrent + 4;
-          end
-          3'b001: begin // SLL
-            rf_we = 1'b1;
-            rf_wdata = sll_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b010: begin // SLT
-            rf_we = 1'b1;
-            rf_wdata = slt_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b011: begin // SLTU
-            rf_we = 1'b1;
-            rf_wdata = sltu_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b100: begin // XOR
-            rf_we = 1'b1;
-            rf_wdata = xor_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b101: begin 
-            if (insn_from_imem[30] == 0) begin // SRL
-              rf_we = 1'b1;
-              rf_wdata = srl_result;
-              // pcNext = pcCurrent + 4;
-            end else begin // SRA
-              rf_we = 1'b1;
-              rf_wdata = sra_result;
-              // pcNext = pcCurrent + 4;
-            end
-          end
-          3'b110: begin // OR
-            rf_we = 1'b1;
-            rf_wdata = or_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b111: begin // AND
-            rf_we = 1'b1;
-            rf_wdata = and_result;
-            // pcNext = pcCurrent + 4;
-          end
-        endcase
-      end
-      OpBranch: begin
-        // Branch instructions
-        case (insn_funct3)
-          3'b000: begin // BEQ
-            branch_taken = (rs1_data == rs2_data);
-          end
-          3'b001: begin // BNE
-            branch_taken = (rs1_data != rs2_data);
-          end
-          3'b100: begin // BLT
-            branch_taken = $signed(rs1_data) < $signed(rs2_data);
-          end
-          3'b101: begin // BGE
-            branch_taken = $signed(rs1_data) >= $signed(rs2_data);
-          end
-          3'b110: begin // BLTU
-            branch_taken = (rs1_data < rs2_data);
-          end
-          3'b111: begin // BGEU
-            branch_taken = (rs1_data >= rs2_data);
-          end
-          default: 
-            illegal_insn = 1'b1;
-        endcase
-        if (branch_taken) begin
-          pc_update_request = 1'b1;
-          pcNext = pcCurrent + 4;
-        end else begin
-          pc_update_request = 1'b0; 
-        end
-      end
-      OpEnviron: begin
-        halt = 1;
-        pcNext = pcCurrent + 4;
-      end
-      default: begin
-        illegal_insn = 1'b1;
-        // pcNext = pcCurrent + 4;
-      end
-    endcase
-  end
-
 endmodule
 
 /* A memory module that supports 1-cycle reads and writes, with one read-only port
  * and one read+write port.
  */
 module MemorySingleCycle #(
-    parameter int NUM_WORDS = 512
+  parameter int NUM_WORDS = 512
 ) (
-    // rst for both imem and dmem
-    input wire rst,
-
-    // clock for both imem and dmem. See RiscvProcessor for clock details.
-    input wire clock_mem,
-
-    // must always be aligned to a 4B boundary
-    input wire [`REG_SIZE] pc_to_imem,
-
-    // the value at memory location pc_to_imem
-    output logic [`REG_SIZE] insn_from_imem,
-
-    // must always be aligned to a 4B boundary
-    input wire [`REG_SIZE] addr_to_dmem,
-
-    // the value at memory location addr_to_dmem
-    output logic [`REG_SIZE] load_data_from_dmem,
-
-    // the value to be written to addr_to_dmem, controlled by store_we_to_dmem
-    input wire [`REG_SIZE] store_data_to_dmem,
-
-    // Each bit determines whether to write the corresponding byte of store_data_to_dmem to memory location addr_to_dmem.
-    // E.g., 4'b1111 will write 4 bytes. 4'b0001 will write only the least-significant byte.
-    input wire [3:0] store_we_to_dmem
+  input wire rst,
+  input wire clock_mem,
+  input wire [`REG_SIZE] pc_to_imem,
+  output logic [`REG_SIZE] insn_from_imem,
+  input wire [`REG_SIZE] addr_to_dmem,
+  output logic [`REG_SIZE] load_data_from_dmem,
+  input wire [`REG_SIZE] store_data_to_dmem,
+  input wire [3:0] store_we_to_dmem
 );
 
   // memory is arranged as an array of 4B words
@@ -486,54 +459,41 @@ module MemorySingleCycle #(
   end
 endmodule
 
-/*
-This shows the relationship between clock_proc and clock_mem. The clock_mem is
-phase-shifted 90° from clock_proc. You could think of one proc cycle being
-broken down into 3 parts. During part 1 (which starts @posedge clock_proc)
-the current PC is sent to the imem. In part 2 (starting @posedge clock_mem) we
-read from imem. In part 3 (starting @negedge clock_mem) we read/write memory and
-prepare register/PC updates, which occur at @posedge clock_proc.
-
-        ____
- proc: |    |______
-           ____
- mem:  ___|    |___
-*/
 module RiscvProcessor (
-    input  wire  clock_proc,
-    input  wire  clock_mem,
-    input  wire  rst,
-    output logic halt
+  input  wire  clock_proc,
+  input  wire  clock_mem,
+  input  wire  rst,
+  output logic halt
 );
 
   wire [`REG_SIZE] pc_to_imem, insn_from_imem, mem_data_addr, mem_data_loaded_value, mem_data_to_write;
   wire [3:0] mem_data_we;
 
   MemorySingleCycle #(
-      .NUM_WORDS(8192)
+    .NUM_WORDS(8192)
   ) mem (
-      .rst      (rst),
-      .clock_mem (clock_mem),
-      // imem is read-only
-      .pc_to_imem(pc_to_imem),
-      .insn_from_imem(insn_from_imem),
-      // dmem is read-write
-      .addr_to_dmem(mem_data_addr),
-      .load_data_from_dmem(mem_data_loaded_value),
-      .store_data_to_dmem (mem_data_to_write),
-      .store_we_to_dmem  (mem_data_we)
+    .rst      (rst),
+    .clock_mem (clock_mem),
+    // imem is read-only
+    .pc_to_imem(pc_to_imem),
+    .insn_from_imem(insn_from_imem),
+    // dmem is read-write
+    .addr_to_dmem(mem_data_addr),
+    .load_data_from_dmem(mem_data_loaded_value),
+    .store_data_to_dmem (mem_data_to_write),
+    .store_we_to_dmem  (mem_data_we)
   );
 
   DatapathSingleCycle datapath (
-      .clk(clock_proc),
-      .rst(rst),
-      .pc_to_imem(pc_to_imem),
-      .insn_from_imem(insn_from_imem),
-      .addr_to_dmem(mem_data_addr),
-      .store_data_to_dmem(mem_data_to_write),
-      .store_we_to_dmem(mem_data_we),
-      .load_data_from_dmem(mem_data_loaded_value),
-      .halt(halt)
+    .clk(clock_proc),
+    .rst(rst),
+    .pc_to_imem(pc_to_imem),
+    .insn_from_imem(insn_from_imem),
+    .addr_to_dmem(mem_data_addr),
+    .store_data_to_dmem(mem_data_to_write),
+    .store_we_to_dmem(mem_data_we),
+    .load_data_from_dmem(mem_data_loaded_value),
+    .halt(halt)
   );
 
 endmodule
