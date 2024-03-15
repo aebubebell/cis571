@@ -216,6 +216,166 @@ module DatapathSingleCycle (
 
   logic illegal_insn;
 
+  logic [31:0] pc_plus_4;
+  assign pc_plus_4 = pcCurrent + 32'd4;
+
+  always_comb begin
+    rf_wdata = 32'b0;
+    rf_we = 1'b0;
+    pcNext = pc_plus_4;
+    illegal_insn = 1'b0;
+    branch_taken = 1'b0;
+
+    unique case (insn_opcode)
+      OpRegReg: begin
+        unique case (insn_funct3)
+          3'b000: begin
+            if (insn_funct7 == 7'd0) begin
+              rf_wdata = add_result;
+            end else if (insn_funct7 == 7'b0100000) begin
+              rf_wdata = sub_result;
+            end else begin
+              illegal_insn = 1'b1;
+            end
+          end
+          3'b001: rf_wdata = sll_result;
+          3'b010: rf_wdata = slt_result;
+          3'b011: rf_wdata = sltu_result;
+          3'b100: rf_wdata = xor_result;
+          3'b101: begin
+            if (insn_funct7 == 7'd0) begin
+              rf_wdata = srl_result;
+            end else if (insn_funct7 == 7'b0100000) begin
+              rf_wdata = sra_result;
+            end else begin
+              illegal_insn = 1'b1;
+            end
+          end
+          3'b110: rf_wdata = or_result;
+          3'b111: rf_wdata = and_result;
+          default: illegal_insn = 1'b1;
+        endcase
+        rf_we = !illegal_insn;
+      end
+
+      OpRegImm: begin
+        unique case (insn_funct3)
+          3'b000: rf_wdata = addi_result;
+          3'b010: rf_wdata = {{20{rs1_data[31]}}, rs1_data[31:20]}; // slti
+          3'b011: rf_wdata = {{20{1'b0}}, rs1_data[11:0]}; // sltiu
+          3'b100: rf_wdata = rs1_data ^ imm_i_sext; // xori
+          3'b110: rf_wdata = rs1_data | imm_i_sext; // ori
+          3'b111: rf_wdata = rs1_data & imm_i_sext; // andi
+          3'b001: rf_wdata = rs1_data << imm_shamt; // slli
+          3'b101: begin
+            if (insn_funct7 == 7'd0) begin
+              rf_wdata = rs1_data >> imm_shamt; // srli
+            end else if (insn_funct7 == 7'b0100000) begin
+              rf_wdata = $signed(rs1_data) >>> imm_shamt; // srai
+            end else begin
+              illegal_insn = 1'b1;
+            end
+          end
+          default: illegal_insn = 1'b1;
+        endcase
+        rf_we = !illegal_insn;
+      end
+
+      OpLui: begin
+        rf_wdata = lui_imm;
+        rf_we = 1'b1;
+      end
+
+      OpAuipc: begin
+        rf_wdata = pcCurrent + lui_imm;
+        rf_we = 1'b1;
+      end
+
+      OpJal: begin
+        rf_wdata = pc_plus_4;
+        pcNext = pcCurrent + imm_j_sext;
+        rf_we = 1'b1;
+      end
+
+      OpJalr: begin
+        rf_wdata = pc_plus_4;
+        pcNext = (rs1_data + imm_i_sext) & ~1;
+        rf_we = 1'b1;
+      end
+
+      OpBranch: begin
+        unique case (insn_funct3)
+          3'b000: branch_taken = rs1_data == rs2_data; // beq
+          3'b001: branch_taken = rs1_data != rs2_data; // bne
+          3'b100: branch_taken = $signed(rs1_data) < $signed(rs2_data); // blt
+          3'b101: branch_taken = $signed(rs1_data) >= $signed(rs2_data); // bge
+          3'b110: branch_taken = rs1_data < rs2_data; // bltu
+          3'b111: branch_taken = rs1_data >= rs2_data; // bgeu
+          default: illegal_insn = 1'b1;
+        endcase
+        if (branch_taken) begin
+          pcNext = pcCurrent + imm_b_sext;
+        end
+      end
+
+      OpLoad: begin
+        unique case (insn_funct3)
+          3'b000: rf_wdata = {{24{load_data_from_dmem[7]}}, load_data_from_dmem[7:0]}; // lb
+          3'b001: rf_wdata = {{16{load_data_from_dmem[15]}}, load_data_from_dmem[15:0]}; // lh
+          3'b010: rf_wdata = load_data_from_dmem; // lw
+          3'b100: rf_wdata = {{24{1'b0}}, load_data_from_dmem[7:0]}; // lbu
+          3'b101: rf_wdata = {{16{1'b0}}, load_data_from_dmem[15:0]}; // lhu
+          default: illegal_insn = 1'b1;
+        endcase
+        rf_we = !illegal_insn;
+      end
+
+      OpStore: begin
+        unique case (insn_funct3)
+          3'b000: store_we_to_dmem = 4'b0001; // sb
+          3'b001: store_we_to_dmem = 4'b0011; // sh
+          3'b010: store_we_to_dmem = 4'b1111; // sw
+          default: illegal_insn = 1'b1;
+        endcase
+      end
+
+      OpMiscMem: begin
+        // Treat fence as a no-op
+      end
+
+      OpSystem: begin
+        if (insn_funct3 == 3'b000) begin
+          if (insn_funct7 == 7'b0000000) begin
+            // ecall
+            // Placeholder for handling ecall
+          end else if (insn_funct7 == 7'b0000001) begin
+            // ebreak
+            // Placeholder for handling ebreak
+          end else begin
+            illegal_insn = 1'b1;
+          end
+        end else begin
+          illegal_insn = 1'b1;
+        end
+      end
+
+      default: illegal_insn = 1'b1;
+    endcase
+
+    // Update PC
+    if (!illegal_insn) begin
+      if (insn_jal || insn_jalr || branch_taken) begin
+        pcNext = pcNext;
+      end else begin
+        pcNext = pc_plus_4;
+      end
+    end
+
+    // Halt on illegal instruction
+    halt = illegal_insn;
+  end
+
+
   // Instantiate the RegFile module
   RegFile rf (
     .rd(insn_rd),                  // assuming insn_rd is the destination register ID
