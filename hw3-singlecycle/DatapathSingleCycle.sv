@@ -24,22 +24,23 @@ module RegFile (
   localparam int NumRegs = 32;
   logic [`REG_SIZE] regs[NumRegs];
 
+  // Initialize register 0 to always be 0
+  assign rs1_data = rs1 == 0 ? 0 : regs[rs1];
+  assign rs2_data = rs2 == 0 ? 0 : regs[rs2];
+
   always_ff @(posedge clk) begin
     if (rst) begin
-      for (int i = 0; i < NumRegs; i++) begin
-        regs[i] <= 0;
+      // Reset all registers except x0
+      for (int i = 1; i < NumRegs; i = i + 1) begin
+        regs[i] <= 32'd0;
       end
     end else if (we && rd != 0) begin
+      // Write to register (rd) if we is asserted and rd is not x0
       regs[rd] <= rd_data;
     end
   end
-
-  always_comb begin
-    rs1_data = regs[rs1];
-    rs2_data = regs[rs2];
-  end
-
 endmodule
+
 
 
 module DatapathSingleCycle (
