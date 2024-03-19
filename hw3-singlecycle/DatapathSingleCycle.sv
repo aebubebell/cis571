@@ -22,24 +22,33 @@ module RegFile (
     input logic rst
 );
   localparam int NumRegs = 32;
-  logic [`REG_SIZE] regs[NumRegs];
+  logic [`REG_SIZE] regs[0:NumRegs-1]; // Register array
 
-  // Initialize register 0 to always be 0
-  assign rs1_data = rs1 == 0 ? 0 : regs[rs1];
-  assign rs2_data = rs2 == 0 ? 0 : regs[rs2];
+  // Correctly initialize registers, if necessary
+  initial begin
+    for (int i = 0; i < NumRegs; i++) begin
+      regs[i] = 0;
+    end
+  end
 
-  always_ff @(posedge clk) begin
+  // On reset, you may choose to clear registers, except x0 which is always 0
+  always_ff @(posedge clk or posedge rst) begin
     if (rst) begin
-      // Reset all registers except x0
-      for (int i = 1; i < NumRegs; i = i + 1) begin
-        regs[i] <= 32'd0;
+      for (int i = 1; i < NumRegs; i++) begin
+        regs[i] <= 0; // Reset all registers except x0
       end
-    end else if (we && rd != 0) begin
-      // Write to register (rd) if we is asserted and rd is not x0
+    end
+    else if (we && rd != 0) begin // Ignore writes to x0
       regs[rd] <= rd_data;
     end
   end
+
+  // Ensure reads from x0 return 0, and from others return their stored value
+  assign rs1_data = rs1 == 0 ? 0 : regs[rs1];
+  assign rs2_data = rs2 == 0 ? 0 : regs[rs2];
+
 endmodule
+
 
 
 
