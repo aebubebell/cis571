@@ -23,24 +23,31 @@ module RegFile (
 );
   localparam int NumRegs = 32;
   logic [`REG_SIZE] regs[NumRegs];
-
- always_ff @(posedge clk) begin
+  // TODO: your code here
+  assign regs[0]  = 32'd0;
+  assign rs1_data = regs[rs1];
+  assign rs2_data = regs[rs2];
+  always_ff @(posedge clk) begin
     if (rst) begin
-        // Reset logic for all registers except regs[0], which is always 0
-        for (int i = 1; i < NumRegs; i++) begin
-            regs[i] <= 32'd0;
-        end
-    end else if (we && rd != 0) begin
-        // Write to the register file, excluding the zero register
-        regs[rd] <= rd_data;
+      regs[1] <= 32'd0;
+    end else begin
+      if (we && rd == 1) begin
+        regs[1] <= rd_data;
+      end
     end
-end
-
-  always_comb begin
-    rs1_data = regs[rs1];
-    rs2_data = regs[rs2];
   end
-
+  genvar i;
+  for (i = 2; i < 32; i = i + 1) begin : gen_other_regs
+    always_ff @(posedge clk) begin
+      if (rst) begin
+        regs[i] <= 32'd0;
+      end else begin
+        if (we && rd == i) begin
+          regs[i] <= rd_data;
+        end
+      end
+    end
+  end
 endmodule
 
 
