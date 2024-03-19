@@ -25,8 +25,8 @@ module RegFile (
   logic [`REG_SIZE] regs[NumRegs];
 
   // Initialize register 0 to always be 0
-  assign rs1_data = rs1 == 0 ? 0 : regs[rs1];
-  assign rs2_data = rs2 == 0 ? 0 : regs[rs2];
+  // assign rs1_data = rs1 == 0 ? 0 : regs[rs1];
+  // assign rs2_data = rs2 == 0 ? 0 : regs[rs2];
 
   always_ff @(posedge clk) begin
     if (rst) begin
@@ -34,11 +34,16 @@ module RegFile (
       for (int i = 1; i < NumRegs; i = i + 1) begin
         regs[i] <= 32'd0;
       end
-    end else if (we && rd != 0) begin
+    end else if (we && rd == i) begin
       // Write to register (rd) if we is asserted and rd is not x0
       regs[rd] <= rd_data;
     end
   end
+
+  assign regs[0] = 32'd0;
+  assign rs1_data = regs[rs1];
+  assign rs2_data = regs[rs2];
+    
 endmodule
 
 
