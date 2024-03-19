@@ -23,32 +23,24 @@ module RegFile (
 );
   localparam int NumRegs = 32;
   logic [`REG_SIZE] regs[NumRegs];
-  // TODO: your code here
-  assign regs[0]  = 32'd0;
-  assign rs1_data = regs[rs1];
-  assign rs2_data = regs[rs2];
+
+  // Initialize register 0 to always be 0
+  assign rs1_data = rs1 == 0 ? 0 : regs[rs1];
+  assign rs2_data = rs2 == 0 ? 0 : regs[rs2];
+
   always_ff @(posedge clk) begin
     if (rst) begin
-      regs[1] <= 32'd0;
-    end else begin
-      if (we && rd == 1) begin
-        regs[1] <= rd_data;
-      end
-    end
-  end
-  genvar i;
-  for (i = 2; i < 32; i = i + 1) begin : gen_other_regs
-    always_ff @(posedge clk) begin
-      if (rst) begin
+      // Reset all registers except x0
+      for (int i = 1; i < NumRegs; i = i + 1) begin
         regs[i] <= 32'd0;
-      end else begin
-        if (we && rd == i) begin
-          regs[i] <= rd_data;
-        end
       end
+    end else if (we && rd != 0) begin
+      // Write to register (rd) if we is asserted and rd is not x0
+      regs[rd] <= rd_data;
     end
   end
 endmodule
+
 
 
 module DatapathSingleCycle (
