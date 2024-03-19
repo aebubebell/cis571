@@ -34,7 +34,7 @@ module RegFile (
       for (int i = 1; i < NumRegs; i = i + 1) begin
         regs[i] <= 32'd0;
       end
-    end else if (we && rd == i) begin
+    end else if (we && rd == 0) begin
       // Write to register (rd) if we is asserted and rd is not x0
       regs[rd] <= rd_data;
     end
