@@ -28,17 +28,19 @@ module RegFile (
   // assign rs1_data = rs1 == 0 ? 0 : regs[rs1];
   // assign rs2_data = rs2 == 0 ? 0 : regs[rs2];
 
+ for (int i = 1; i < NumRegs; i = i + 1) begin
   always_ff @(posedge clk) begin
     if (rst) begin
       // Reset all registers except x0
-      for (int i = 1; i < NumRegs; i = i + 1) begin
+
         regs[i] <= 32'd0;
-      end
+      
     end else if (we && rd == 0) begin
       // Write to register (rd) if we is asserted and rd is not x0
       regs[rd] <= rd_data;
     end
   end
+     end
 
   assign regs[0] = 32'd0;
   assign rs1_data = regs[rs1];
