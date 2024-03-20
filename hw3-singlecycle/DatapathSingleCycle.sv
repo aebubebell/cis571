@@ -400,9 +400,10 @@ module DatapathSingleCycle (
         endcase
         if (branch_taken) begin
           pc_update_request = 1'b1;
-          pcNext = pcCurrent + 4;
+            pcNext = pcCurrent + imm_b_sext;
         end else begin
           pc_update_request = 1'b0; 
+          pcNext = pcCurrent + 4;
         end
       end
       OpEnviron: begin
