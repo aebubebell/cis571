@@ -27,7 +27,7 @@ module RegFile (
   // Initialize register 0 to always be 0
   // assign rs1_data = rs1 == 0 ? 0 : regs[rs1];
   // assign rs2_data = rs2 == 0 ? 0 : regs[rs2];
-
+genvar i;
 for (int i = 1; i < NumRegs; i = i + 1) begin
   always_ff @(posedge clk) begin
     if (rst) begin
