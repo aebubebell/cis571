@@ -240,7 +240,7 @@ module DatapathSingleCycle (
   cla cla_add(.a(rs1_data), .b(rs2_data), .cin(0), .sum(add_result));
   cla cla_sub(.a(rs1_data), .b(rs2_data), .cin(1), .sum(sub_result));
   cla cla_addi(.a(rs1_data), .b(imm_i_sext), .cin(0), .sum(addi_result));
-  cla cla_sll(.a(rs1_data), .b({rs2_data[4:0], 27'b0}), .cin(0), .sum(sll_result));
+  
   cla cla_slt(.a(rs1_data), .b(rs2_data), .cin(0), .sum(slt_result));
   cla cla_sltu(.a(rs1_data), .b(rs2_data), .cin(0), .sum(sltu_result));
   cla cla_srl(.a(rs1_data), .b({rs2_data[4:0], 27'b0}), .cin(0), .sum(srl_result));
