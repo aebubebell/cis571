@@ -156,7 +156,7 @@ module DatapathSingleCycle (
   wire insn_srai = insn_opcode == OpRegImm && insn_from_imem[14:12] == 3'b101 && insn_from_imem[31:25] == 7'b0100000;
 
   wire insn_add = insn_opcode == OpRegReg && insn_from_imem[14:12] == 3'b000 && insn_from_imem[31:25] == 7'd0;
-  wire insn_sub  = insn_opcode == OpRegReg && insn_from_imem[14:12] == 3'b000 && insn_from_imem[31:25] == 7'b0100000;
+  wire insn_  = insn_opcode == OpRegReg && insn_from_imem[14:12] == 3'b000 && insn_from_imem[31:25] == 7'b0100000;
   wire insn_sll = insn_opcode == OpRegReg && insn_from_imem[14:12] == 3'b001 && insn_from_imem[31:25] == 7'd0;
   wire insn_slt = insn_opcode == OpRegReg && insn_from_imem[14:12] == 3'b010 && insn_from_imem[31:25] == 7'd0;
   wire insn_sltu = insn_opcode == OpRegReg && insn_from_imem[14:12] == 3'b011 && insn_from_imem[31:25] == 7'd0;
@@ -238,7 +238,7 @@ module DatapathSingleCycle (
   );
 
   cla cla_add(.a(rs1_data), .b(rs2_data), .cin(0), .sum(add_result));
-  cla cla_sub(.a(rs1_data), .b(rs2_data), .cin(1), .sum(sub_result));
+    cla cla_sub(.a(rs1_data), .b(~rs2_data), .cin(1), .sum(sub_result));
   cla cla_addi(.a(rs1_data), .b(imm_i_sext), .cin(0), .sum(addi_result));
   
   cla cla_slt(.a(rs1_data), .b(rs2_data), .cin(0), .sum(slt_result));
@@ -265,7 +265,7 @@ module DatapathSingleCycle (
       OpLui: begin
         // TODO: start here by implementing lui
         rf_we = 1'b1;
-        rf_wdata = lui_imm;
+        rf_wdata = ;
       end
       OpRegImm: begin
         case (insn_funct3)
