@@ -290,12 +290,12 @@ module DatapathSingleCycle (
           end
           3'b011: begin // SLTIU
             rf_we = 1'b1;
-            rf_wdata = rs1_data < i_sext ? 32'b1 : 32'b0;
+            rf_wdata = rs1_data < imm_i_sext ? 32'b1 : 32'b0;
             // pcNext = pcCurrent + 4;
           end
           3'b100: begin // XORI
             rf_we = 1'b1;
-            rf_wdata = rs1_data ^ i_sext;
+            rf_wdata = rs1_data ^ imm_i_sext;
             // pcNext = pcCurrent + 4;
           end
           3'b110: begin // ORI
