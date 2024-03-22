@@ -237,9 +237,9 @@ module DatapathSingleCycle (
     .rst(rst)                      // reset signal
   );
 
-  cla cla_add(.a(rs1_data), .b(rs2_data), .cin(0), .sum(add_result));
-    cla cla_sub(.a(rs1_data), .b(~rs2_data), .cin(1), .sum(sub_result));
-  cla cla_addi(.a(rs1_data), .b(imm_i_sext), .cin(0), .sum(addi_result));
+  cla cla_add(.a(rs1_data), .b(rs2_data), .cin(1'b0), .sum(add_result));
+  cla cla_sub(.a(rs1_data), .b(~rs2_data), .cin(1'b1), .sum(sub_result));
+  cla cla_addi(.a(rs1_data), .b(imm_i_sext), .cin(1'b0), .sum(addi_result));
   
   cla cla_slt(.a(rs1_data), .b(rs2_data), .cin(0), .sum(slt_result));
   cla cla_sltu(.a(rs1_data), .b(rs2_data), .cin(0), .sum(sltu_result));
@@ -322,7 +322,7 @@ module DatapathSingleCycle (
       OpRegReg: begin
         case (insn_funct3)
           3'b000: begin 
-            if (insn_opcode == 7'b010) begin // SUB
+              if (insn_sub) begin // SUB
               rf_we = 1'b1;
               rf_wdata = sub_result;
             end else begin // ADD
