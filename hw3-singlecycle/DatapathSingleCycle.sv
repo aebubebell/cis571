@@ -260,7 +260,7 @@ module DatapathSingleCycle (
       halt = 0;
       pcNext = pcCurrent + 4;
     
-      OpRegImm: begin
+      
           // LUI: Load Upper Immediate
           if (insn_lui) begin
             rf_we = 1'b1;
@@ -295,10 +295,10 @@ module DatapathSingleCycle (
           end else begin
             illegal_insn = 1'b1; // Mark as illegal if none of the above
           end
-      end
+      
     
       // RegReg Instructions
-      OpRegReg: begin
+     
            if (insn_sub) begin // SUB: Subtract
             rf_we = 1'b1;
             rf_wdata = sub_result; // Subtract
@@ -330,10 +330,10 @@ module DatapathSingleCycle (
             rf_we = 1'b1;
             rf_wdata = and_result; // Logical AND
           end
-      end
+      
         
       // Branch Instructions
-      OpBranch: begin
+     
           if (insn_beq && (rs1_data == rs2_data)) begin // BEQ: Branch if Equal
             pcNext = pcCurrent + imm_b_sext; // Branch
           end else if (insn_bne && (rs1_data != rs2_data)) begin // BNE: Branch if Not Equal
@@ -368,7 +368,7 @@ module DatapathSingleCycle (
             illegal_insn = 1'b1; // Mark as illegal if none of the above
           end
           
-      end
+      
         
   end
 
