@@ -102,10 +102,15 @@ module DatapathSingleCycle (
   wire [20:0] imm_j;
   assign {imm_j[20], imm_j[10:1], imm_j[11], imm_j[19:12], imm_j[0]} = {insn_from_imem[31:12], 1'b0};
 
+  // U - 20-bit immediate
+  wire [19:0] imm_u;
+  assign imm_u = insn_from_imem[31:12];
+
   wire [`REG_SIZE] imm_i_sext = {{20{imm_i[11]}}, imm_i[11:0]};
   wire [`REG_SIZE] imm_s_sext = {{20{imm_s[11]}}, imm_s[11:0]};
   wire [`REG_SIZE] imm_b_sext = {{19{imm_b[12]}}, imm_b[12:0]};
   wire [`REG_SIZE] imm_j_sext = {{11{imm_j[20]}}, imm_j[20:0]};
+  wire [`REG_SIZE] imm_u_sext = {{12{imm_u[19]}}, imm_u[19:0]};
 
   // opcodes - see section 19 of RiscV spec
   localparam bit [`OPCODE_SIZE] OpLoad = 7'b00_000_11;
@@ -268,7 +273,7 @@ module DatapathSingleCycle (
         rf_wdata = lui_imm;
       end
       OpAuipc: begin //AUIPC
-        regfile_we = 1'b1;
+        rf_we = 1'b1;
         rf_wdata = pcCurrent + {{imm_u[19:0]}, 12'b0};  // 20-bit bitshifted left by 12
       end
       OpRegImm: begin
@@ -285,12 +290,12 @@ module DatapathSingleCycle (
           end
           3'b011: begin // SLTIU
             rf_we = 1'b1;
-            rf_wdata = rs1_data < imm_i_sext ? 32'b1 : 32'b0;
+            rf_wdata = rs1_data < i_sext ? 32'b1 : 32'b0;
             // pcNext = pcCurrent + 4;
           end
           3'b100: begin // XORI
             rf_we = 1'b1;
-            rf_wdata = rs1_data ^ imm_i_sext;
+            rf_wdata = rs1_data ^ i_sext;
             // pcNext = pcCurrent + 4;
           end
           3'b110: begin // ORI
