@@ -367,7 +367,7 @@ module DatapathSingleCycle (
               // pcNext = pcCurrent + 4;
             end else begin // SRA
               rf_we = 1'b1;
-              rf_wdata = sra_result;
+                rf_wdata = $signed(rs1_data) >>> $signed(rs2_data[4:0]);
               // pcNext = pcCurrent + 4;
             end
           end
