@@ -268,133 +268,93 @@ module DatapathSingleCycle (
         rf_wdata = lui_imm;
       end
       OpRegImm: begin
-        case (insn_funct3)
-          3'b000: begin // ADDI
+          if (insn_addi) begin // ADDI
             rf_we = 1'b1;
             rf_wdata = addi_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b010: begin // SLTI
+          end else if (insn_slti) begin // SLTI
             rf_we = 1'b1;
             rf_wdata = $signed(rs1_data) < $signed(imm_i_sext) ? 32'b1 : 32'b0;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b011: begin // SLTIU
+          end else if (insn_sltiu) begin // SLTIU
             rf_we = 1'b1;
             rf_wdata = rs1_data < imm_i_sext ? 32'b1 : 32'b0;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b100: begin // XORI
+          end else if (insn_xori) begin // XORI
             rf_we = 1'b1;
             rf_wdata = rs1_data ^ imm_i_sext;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b110: begin // ORI
+          end else if (insn_ori) begin // ORI
             rf_we = 1'b1;
             rf_wdata = rs1_data | imm_i_sext;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b111: begin // ANDI
+          end else if (insn_andi) begin // ANDI
             rf_we = 1'b1;
             rf_wdata = rs1_data & imm_i_sext;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b001: begin // SLLI
+          end else if (insn_slli) begin // SLLI
             rf_we = 1'b1;
-            rf_wdata = rs1_data << imm_i_sext[4:0]; 
-            // pcNext = pcCurrent + 4;
-          end
-          3'b101: begin
-            if (imm_i_sext[10] == 1'b0) begin // SRLI
-              rf_we = 1'b1;
-              rf_wdata = rs1_data >> imm_i_sext[4:0]; 
-              // pcNext = pcCurrent + 4;
-            end else begin // SRAI
-              rf_we = 1'b1;
-              rf_wdata = $signed(rs2_data) >>> imm_i_sext[4:0];
-              // pcNext = pcCurrent + 4;
-            end
-          end
+            rf_wdata = rs1_data << imm_i_sext[4:0];
+          end else if (insn_srli) begin // SRLI
+            rf_we = 1'b1;
+            rf_wdata = rs1_data >> imm_i_sext[4:0];
+          end else if (insn_srai) begin // SRAI
+            rf_we = 1'b1;
+            rf_wdata = $signed(rs1_data) >>> imm_i_sext[4:0];
+          end else if (insn_fence) begin // NOP or similar system operation
+            // Handle NOP or fence operations. NOP might simply be a pipeline pass-through without any operation.
+            // rf_we remains 0 to indicate no write-back.
+            // For NOP, typically no action is required, but this is where you could handle synchronization or other system instructions if necessary.
+          end else begin
+            illegal_insn = 1'b1;
+  end
+end
+
           default: 
             illegal_insn = 1'b1;
         endcase
       end
-      OpRegReg: begin
-        case (insn_funct3)
-          3'b000: begin 
-              if (insn_sub) begin // SUB
-              rf_we = 1'b1;
-              rf_wdata = sub_result;
-            end else begin // ADD
-              rf_we = 1'b1;
-              rf_wdata = add_result;
-            end
-            // pcNext = pcCurrent + 4;
-          end
-          3'b001: begin // SLL
-            rf_we = 1'b1;
-            rf_wdata = sll_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b010: begin // SLT
-            rf_we = 1'b1;
-            rf_wdata = slt_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b011: begin // SLTU
-            rf_we = 1'b1;
-            rf_wdata = sltu_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b100: begin // XOR
-            rf_we = 1'b1;
-            rf_wdata = xor_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b101: begin 
-            if (insn_from_imem[30] == 0) begin // SRL
-              rf_we = 1'b1;
-              rf_wdata = srl_result;
-              // pcNext = pcCurrent + 4;
-            end else begin // SRA
-              rf_we = 1'b1;
-              rf_wdata = sra_result;
-              // pcNext = pcCurrent + 4;
-            end
-          end
-          3'b110: begin // OR
-            rf_we = 1'b1;
-            rf_wdata = or_result;
-            // pcNext = pcCurrent + 4;
-          end
-          3'b111: begin // AND
-            rf_we = 1'b1;
-            rf_wdata = and_result;
-            // pcNext = pcCurrent + 4;
-          end
-        endcase
-      end
-      OpBranch: begin
-        // Branch instructions
-        case (insn_funct3)
-          3'b000: begin // BEQ
-            branch_taken = (rs1_data == rs2_data);
-          end
-          3'b001: begin // BNE
-            branch_taken = (rs1_data != rs2_data);
-          end
-          3'b100: begin // BLT
-            branch_taken = $signed(rs1_data) < $signed(rs2_data);
-          end
-          3'b101: begin // BGE
-            branch_taken = $signed(rs1_data) >= $signed(rs2_data);
-          end
-          3'b110: begin // BLTU
-            branch_taken = (rs1_data < rs2_data);
-          end
-          3'b111: begin // BGEU
-            branch_taken = (rs1_data >= rs2_data);
-          end
+OpRegReg: begin
+  if (insn_sub) begin // SUB
+    rf_we = 1'b1;
+    rf_wdata = sub_result;
+  end else if (insn_add) begin // ADD
+    rf_we = 1'b1;
+    rf_wdata = add_result;
+  end else if (insn_sll) begin // SLL
+    rf_we = 1'b1;
+    rf_wdata = sll_result;
+  end else if (insn_slt) begin // SLT
+    rf_we = 1'b1;
+    rf_wdata = slt_result;
+  end else if (insn_sltu) begin // SLTU
+    rf_we = 1'b1;
+    rf_wdata = sltu_result;
+  end else if (insn_xor) begin // XOR
+    rf_we = 1'b1;
+    rf_wdata = xor_result;
+  end else if (insn_srl) begin // SRL
+    rf_we = 1'b1;
+    rf_wdata = srl_result;
+  end else if (insn_sra) begin // SRA
+    rf_we = 1'b1;
+    rf_wdata = sra_result;
+  end else if (insn_or) begin // OR
+    rf_we = 1'b1;
+    rf_wdata = or_result;
+  end else if (insn_and) begin // AND
+    rf_we = 1'b1;
+    rf_wdata = and_result;
+  end
+end
+OpBranch: begin
+  if (insn_beq) begin // BEQ
+    branch_taken = (rs1_data == rs2_data);
+  end else if (insn_bne) begin // BNE
+    branch_taken = (rs1_data != rs2_data);
+  end else if (insn_blt) begin // BLT
+    branch_taken = $signed(rs1_data) < $signed(rs2_data);
+  end else if (insn_bge) begin // BGE
+    branch_taken = $signed(rs1_data) >= $signed(rs2_data);
+  end else if (insn_bltu) begin // BLTU
+    branch_taken = (rs1_data < rs2_data);
+  end else if (insn_bgeu) begin // BGEU
+    branch_taken = (rs1_data >= rs2_data);
+  end
           default: 
             illegal_insn = 1'b1;
         endcase
