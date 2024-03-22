@@ -378,7 +378,7 @@ module DatapathSingleCycle (
           end
           3'b111: begin // AND
             rf_we = 1'b1;
-            rf_wdata = rs1_data & imm_i_sext;
+            rf_wdata = rs1_data & rs1_data;
             // pcNext = pcCurrent + 4;
           end
         endcase
