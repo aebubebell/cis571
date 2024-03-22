@@ -183,7 +183,7 @@ module DatapathSingleCycle (
   wire insn_ecall = insn_opcode == OpEnviron && insn_from_imem[31:7] == 25'd0;
   wire insn_fence = insn_opcode == OpMiscMem;
 
-  wire [31:0] lui_imm = {insn_from_imem[31:12], 12'b0};
+  wire [31:0] lui_imm = {{imm_u[19:0]}, 12'b0};
 
   wire [31:0] add_result, sub_result, addi_result, sll_result, slt_result, sltu_result, srl_result, sra_result, xor_result, or_result, and_result;
 
