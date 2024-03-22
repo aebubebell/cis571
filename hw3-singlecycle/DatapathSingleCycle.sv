@@ -426,6 +426,15 @@ module DatapathSingleCycle (
       rf_wdata = pcCurrent + 4; // Return address is current PC + 4
       pcNext = (rs1_data + imm_i_sext) & ~32'b1; // Clear least significant bit to ensure alignment
     end
+    OpMiscMem: begin
+            // Check for insn_fence -> as nop in this context
+            if (insn_fence) begin
+                // No operation performed, just advance to the next instruction
+                rf_we = 1'b0;
+                branch_taken = 1'b0;
+                pc_update_request = 1'b0;
+            end 
+        end
     endcase
   end
 
