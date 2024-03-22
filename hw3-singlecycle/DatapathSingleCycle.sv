@@ -274,7 +274,7 @@ module DatapathSingleCycle (
       end
       OpAuipc: begin //AUIPC
         rf_we = 1'b1;
-        rf_wdata = pcCurrent + {{imm_u[19:0]}, 12'b0};  // 20-bit bitshifted left by 12
+        rf_wdata = pcCurrent + {{imm_u[19:0]}, 12'b0};
       end
       OpRegImm: begin
         case (insn_funct3)
@@ -352,7 +352,7 @@ module DatapathSingleCycle (
           end
           3'b011: begin // SLTU
             rf_we = 1'b1;
-            rf_wdata = sltu_result;
+            rf_wdata = rs1_data < rs2_data ? 1 : 0;
             // pcNext = pcCurrent + 4;
           end
           3'b100: begin // XOR
