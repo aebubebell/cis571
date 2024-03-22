@@ -306,7 +306,7 @@ end
 
           default: 
             illegal_insn = 1'b1;
-        endcase
+        
       end
 OpRegReg: begin
   if (insn_sub) begin // SUB
@@ -357,7 +357,7 @@ OpBranch: begin
   end
           default: 
             illegal_insn = 1'b1;
-        endcase
+        
         if (branch_taken) begin
           pc_update_request = 1'b1;
             pcNext = pcCurrent + imm_b_sext;
@@ -397,7 +397,6 @@ OpBranch: begin
                 
             end 
         end
-    endcase
   end
 
 endmodule
