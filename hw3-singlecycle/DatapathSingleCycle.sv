@@ -249,127 +249,199 @@ module DatapathSingleCycle (
   cla cla_or(.a(rs1_data), .b(rs2_data), .cin(0), .sum(or_result));
   cla cla_and(.a(rs1_data), .b(rs2_data), .cin(0), .sum(and_result));
 
- always_comb begin
-      illegal_insn = 1'b0;
-      rf_we = 1'b0; 
-      rf_wdata = 32'b0;
-      branch_taken = 1'b0;
-      pc_update_request = 1'b0;
-      pc_update_value = 32'b0;
-      system_call_request = 1'b0;
-      halt = 0;
-      pcNext = pcCurrent + 4;
-    
-      
-          // LUI: Load Upper Immediate
-          if (insn_lui) begin
+  always_comb begin
+    illegal_insn = 1'b0;
+    rf_we = 1'b0; 
+    rf_wdata = 32'b0;
+    branch_taken = 1'b0; // Signal to indicate if branch is taken
+    pc_update_request = 1'b0; // Request to update the program counter
+    pc_update_value = 32'b0; // New value for the program counter if branch is taken
+    system_call_request = 1'b0; // Signal to indicate a system call request
+    // branch_offset = 32'sd0;
+    halt = 1'b0;
+    pcNext = pcCurrent + 4;
+
+    case (insn_opcode)
+      OpLui: begin
+        // TODO: start here by implementing lui
+        rf_we = 1'b1;
+        rf_wdata = lui_imm;
+      end
+      OpAuipc: begin //AUIPC
+        regfile_we = 1'b1;
+        rf_wdata = pcCurrent + {{imm_u[19:0]}, 12'b0};  // 20-bit bitshifted left by 12
+      end
+      OpRegImm: begin
+        case (insn_funct3)
+          3'b000: begin // ADDI
             rf_we = 1'b1;
-            rf_wdata = lui_imm; // Load upper immediate
-          end else if (insn_addi) begin // ADDI: Add Immediate
-            rf_we = 1'b1;
-            rf_wdata = addi_result; // Add immediate
-          end else if (insn_slti) begin // SLTI: Set Less Than Immediate (signed)
-            rf_we = 1'b1;
-            rf_wdata = $signed(rs1_data) < $signed(imm_i_sext) ? 32'b1 : 32'b0; // Set less than immediate
-          end else if (insn_sltiu) begin // SLTIU: Set Less Than Immediate Unsigned
-            rf_we = 1'b1;
-            rf_wdata = rs1_data < imm_i_sext ? 32'b1 : 32'b0; // Set less than immediate unsigned
-          end else if (insn_xori) begin // XORI: XOR Immediate
-            rf_we = 1'b1;
-            rf_wdata = rs1_data ^ imm_i_sext; // XOR immediate
-          end else if (insn_ori) begin // ORI: OR Immediate
-            rf_we = 1'b1;
-            rf_wdata = rs1_data | imm_i_sext;  // OR immediate
-          end else if (insn_andi) begin // ANDI: AND Immediate
-            rf_we = 1'b1;
-            rf_wdata = rs1_data & imm_i_sext; // AND immediate
-          end else if (insn_slli) begin // SLLI: Shift Left Logical Immediate
-            rf_we = 1'b1;
-            rf_wdata = rs1_data << imm_i_sext[4:0]; // Shift left logical immediate
-          end else if (insn_srli) begin // SRLI: Shift Right Logical Immediate
-            rf_we = 1'b1;
-            rf_wdata = rs1_data >> imm_i_sext[4:0];  // Shift right logical immediate
-          end else if (insn_srai) begin // SRAI: Shift Right Arithmetic Immediate
-            rf_we = 1'b1;
-            rf_wdata = rs1_data >>> imm_i_sext[4:0]; // Shift right arithmetic immediate
-          end else begin
-            illegal_insn = 1'b1; // Mark as illegal if none of the above
+            rf_wdata = addi_result;
+            // pcNext = pcCurrent + 4;
           end
-      
-    
-      // RegReg Instructions
-     
-           if (insn_sub) begin // SUB: Subtract
+          3'b010: begin // SLTI
             rf_we = 1'b1;
-            rf_wdata = sub_result; // Subtract
-          end else if (insn_add) begin // ADD: Add
-            rf_we = 1'b1;
-            rf_wdata = add_result; // Add
-          end else if (insn_sll) begin // SLL: Shift Left Logical
-            rf_we = 1'b1;
-            rf_wdata = sll_result; // Shift left logical
-          end else if (insn_slt) begin // SLT: Set Less Than (signed)
-            rf_we = 1'b1;
-            rf_wdata = slt_result; // Set less than
-          end else if (insn_sltu) begin // SLTU: Set Less Than Unsigned
-            rf_we = 1'b1;
-            rf_wdata = sltu_result; // Set less than unsigned
-          end else if (insn_xor) begin // XOR: Exclusive OR
-            rf_we = 1'b1;
-            rf_wdata = xor_result; // Exclusive OR
-          end else if (insn_srl) begin // SRL: Shift Right Logical
-            rf_we = 1'b1;
-            rf_wdata = srl_result; // Shift right logical
-          end else if (insn_sra) begin // SRA: Shift Right Arithmetic
-            rf_we = 1'b1;
-            rf_wdata = sra_result; // Shift right arithmetic
-          end else if (insn_or) begin // OR: Logical OR
-            rf_we = 1'b1;
-            rf_wdata = or_result; // Logical OR
-          end else if (insn_and) begin // AND: Logical AND
-            rf_we = 1'b1;
-            rf_wdata = and_result; // Logical AND
+            rf_wdata = $signed(rs1_data) < $signed(imm_i_sext) ? 32'b1 : 32'b0;
+            // pcNext = pcCurrent + 4;
           end
-      
-        
-      // Branch Instructions
-     
-          if (insn_beq && (rs1_data == rs2_data)) begin // BEQ: Branch if Equal
-            pcNext = pcCurrent + imm_b_sext; // Branch
-          end else if (insn_bne && (rs1_data != rs2_data)) begin // BNE: Branch if Not Equal
-            pcNext = pcCurrent + imm_b_sext; // Branch
-          end else if (insn_blt && $signed (rs1_data) < $signed(rs2_data)) begin // BLT: Branch if Less Than
-            pcNext = pcCurrent + imm_b_sext; // Branch
-          end else if (insn_bge && $signed(rs1_data) >= $signed(rs2_data)) begin // BGE: Branch if Greater or Equal
-            pcNext = pcCurrent + imm_b_sext; // Branch
-          end else if (insn_bltu && (rs1_data < rs2_data)) begin // BLTU: Branch if Less Than Unsigned
-            pcNext = pcCurrent + imm_b_sext; // Branch
-          end else if (insn_bgeu && (rs1_data >= rs2_data)) begin // BGEU: Branch if Greater or Equal Unsigned
-            pcNext = pcCurrent + imm_b_sext; // Branch
-        
-          // JAL: Jump and Link
-          end else if (insn_jal) begin
+          3'b011: begin // SLTIU
             rf_we = 1'b1;
-            rf_wdata = pcCurrent + 4; // Return address
-            pcNext = pcCurrent + imm_j_sext; // Jump
-        
-          // JALR: Jump and Link Register
-          end else if (insn_jalr) begin
-            rf_we = 1'b1;
-            rf_wdata = pcCurrent + 4; // Return address
-            pcNext = (rs1_data + imm_i_sext) & ~32'b1; // Jump, ensure alignment
-        
-          // NOP or similar system operation identified by a fence instruction in this context
-          end else if (insn_fence) begin
-            // NOP operation, no state change, simply advance PC
-            pcNext = pcCurrent + 4;
-        
-          end else begin
-            illegal_insn = 1'b1; // Mark as illegal if none of the above
+            rf_wdata = rs1_data < imm_i_sext ? 32'b1 : 32'b0;
+            // pcNext = pcCurrent + 4;
           end
-          
-      
-        
+          3'b100: begin // XORI
+            rf_we = 1'b1;
+            rf_wdata = rs1_data ^ imm_i_sext;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b110: begin // ORI
+            rf_we = 1'b1;
+            rf_wdata = rs1_data | imm_i_sext;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b111: begin // ANDI
+            rf_we = 1'b1;
+            rf_wdata = rs1_data & imm_i_sext;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b001: begin // SLLI
+            rf_we = 1'b1;
+            rf_wdata = rs1_data << imm_i_sext[4:0]; 
+            // pcNext = pcCurrent + 4;
+          end
+          3'b101: begin
+            if (imm_i_sext[10] == 1'b0) begin // SRLI
+              rf_we = 1'b1;
+              rf_wdata = rs1_data >> imm_i_sext[4:0]; 
+              // pcNext = pcCurrent + 4;
+            end else begin // SRAI
+              rf_we = 1'b1;
+              rf_wdata = $signed(rs2_data) >>> imm_i_sext[4:0];
+              // pcNext = pcCurrent + 4;
+            end
+          end
+          default: 
+            illegal_insn = 1'b1;
+        endcase
+      end
+      OpRegReg: begin
+        case (insn_funct3)
+          3'b000: begin 
+              if (insn_sub) begin // SUB
+              rf_we = 1'b1;
+              rf_wdata = sub_result;
+            end else begin // ADD
+              rf_we = 1'b1;
+              rf_wdata = add_result;
+            end
+            // pcNext = pcCurrent + 4;
+          end
+          3'b001: begin // SLL
+            rf_we = 1'b1;
+            rf_wdata = sll_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b010: begin // SLT
+            rf_we = 1'b1;
+            rf_wdata = slt_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b011: begin // SLTU
+            rf_we = 1'b1;
+            rf_wdata = sltu_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b100: begin // XOR
+            rf_we = 1'b1;
+            rf_wdata = xor_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b101: begin 
+            if (insn_from_imem[30] == 0) begin // SRL
+              rf_we = 1'b1;
+              rf_wdata = srl_result;
+              // pcNext = pcCurrent + 4;
+            end else begin // SRA
+              rf_we = 1'b1;
+              rf_wdata = sra_result;
+              // pcNext = pcCurrent + 4;
+            end
+          end
+          3'b110: begin // OR
+            rf_we = 1'b1;
+            rf_wdata = or_result;
+            // pcNext = pcCurrent + 4;
+          end
+          3'b111: begin // AND
+            rf_we = 1'b1;
+            rf_wdata = and_result;
+            // pcNext = pcCurrent + 4;
+          end
+        endcase
+      end
+      OpBranch: begin
+        // Branch instructions
+        case (insn_funct3)
+          3'b000: begin // BEQ
+            branch_taken = (rs1_data == rs2_data);
+          end
+          3'b001: begin // BNE
+            branch_taken = (rs1_data != rs2_data);
+          end
+          3'b100: begin // BLT
+            branch_taken = $signed(rs1_data) < $signed(rs2_data);
+          end
+          3'b101: begin // BGE
+            branch_taken = $signed(rs1_data) >= $signed(rs2_data);
+          end
+          3'b110: begin // BLTU
+            branch_taken = (rs1_data < rs2_data);
+          end
+          3'b111: begin // BGEU
+            branch_taken = (rs1_data >= rs2_data);
+          end
+          default: 
+            illegal_insn = 1'b1;
+        endcase
+        if (branch_taken) begin
+          pc_update_request = 1'b1;
+            pcNext = pcCurrent + imm_b_sext;
+        end else begin
+          pc_update_request = 1'b0; 
+          pcNext = pcCurrent + 4;
+        end
+      end
+      OpEnviron: begin
+        halt = 1;
+        pcNext = pcCurrent + 4;
+      end
+      default: begin
+        illegal_insn = 1'b1;
+        // pcNext = pcCurrent + 4;
+      end
+    OpJal: begin
+      // JAL instruction
+      rf_we = 1'b1; // Enable writing to the register file
+      rf_wdata = pcCurrent + 4; // Return address is current PC + 4
+      pcNext = pcCurrent + imm_j_sext; // Jump to target address
+    end
+    OpJalr: begin
+      // JALR instruction
+      rf_we = 1'b1; // Enable writing to the register file
+      rf_wdata = pcCurrent + 4; // Return address is current PC + 4
+      pcNext = (rs1_data + imm_i_sext) & ~32'b1; // Clear least significant bit to ensure alignment
+    end
+    OpMiscMem: begin
+            // Check for insn_fence -> as nop in this context
+            if (insn_fence) begin
+                // No operation performed, just advance to the next instruction
+                rf_we = 1'b0;
+                branch_taken = 1'b0;
+                pc_update_request = 1'b0;
+                pcNext = pcCurrent + 4;
+                
+            end 
+        end
+    endcase
   end
 
 endmodule
