@@ -320,7 +320,7 @@ module DatapathSingleCycle (
               // pcNext = pcCurrent + 4;
             end else begin // SRAI
               rf_we = 1'b1;
-              rf_wdata = $signed(rs2_data) >>> imm_i_sext[4:0];
+                rf_wdata = $signed(rs1_data) >>> imm_i_sext[4:0];
               // pcNext = pcCurrent + 4;
             end
           end
