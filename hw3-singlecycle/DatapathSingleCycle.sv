@@ -414,6 +414,18 @@ module DatapathSingleCycle (
         illegal_insn = 1'b1;
         // pcNext = pcCurrent + 4;
       end
+    OpJal: begin
+      // JAL instruction
+      rf_we = 1'b1; // Enable writing to the register file
+      rf_wdata = pcCurrent + 4; // Return address is current PC + 4
+      pcNext = pcCurrent + imm_j_sext; // Jump to target address
+    end
+    OpJalr: begin
+      // JALR instruction
+      rf_we = 1'b1; // Enable writing to the register file
+      rf_wdata = pcCurrent + 4; // Return address is current PC + 4
+      pcNext = (rs1_data + imm_i_sext) & ~32'b1; // Clear least significant bit to ensure alignment
+    end
     endcase
   end
 
