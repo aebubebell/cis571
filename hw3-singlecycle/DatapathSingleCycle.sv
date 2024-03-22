@@ -270,28 +270,28 @@ module DatapathSingleCycle (
             rf_wdata = addi_result; // Add immediate
           end else if (insn_slti) begin // SLTI: Set Less Than Immediate (signed)
             rf_we = 1'b1;
-            rf_wdata = slti_result; // Set less than immediate
+            rf_wdata = $signed(rs1_data) < $signed(imm_i_sext) ? 32'b1 : 32'b0; // Set less than immediate
           end else if (insn_sltiu) begin // SLTIU: Set Less Than Immediate Unsigned
             rf_we = 1'b1;
-            rf_wdata = sltiu_result; // Set less than immediate unsigned
+            rf_wdata = rs1_data < imm_i_sext ? 32'b1 : 32'b0; // Set less than immediate unsigned
           end else if (insn_xori) begin // XORI: XOR Immediate
             rf_we = 1'b1;
-            rf_wdata = xori_result; // XOR immediate
+            rf_wdata = rs1_data ^ imm_i_sext; // XOR immediate
           end else if (insn_ori) begin // ORI: OR Immediate
             rf_we = 1'b1;
-            rf_wdata = ori_result; // OR immediate
+            rf_wdata = rs1_data | imm_i_sext;  // OR immediate
           end else if (insn_andi) begin // ANDI: AND Immediate
             rf_we = 1'b1;
-            rf_wdata = andi_result; // AND immediate
+            rf_wdata = rs1_data & imm_i_sext; // AND immediate
           end else if (insn_slli) begin // SLLI: Shift Left Logical Immediate
             rf_we = 1'b1;
-            rf_wdata = slli_result; // Shift left logical immediate
+            rf_wdata = rs1_data << imm_i_sext[4:0]; // Shift left logical immediate
           end else if (insn_srli) begin // SRLI: Shift Right Logical Immediate
             rf_we = 1'b1;
-            rf_wdata = srli_result; // Shift right logical immediate
+            rf_wdata = rs1_data >> imm_i_sext[4:0];  // Shift right logical immediate
           end else if (insn_srai) begin // SRAI: Shift Right Arithmetic Immediate
             rf_we = 1'b1;
-            rf_wdata = srai_result; // Shift right arithmetic immediate
+            rf_wdata = rs1_data >>> imm_i_sext[4:0]; // Shift right arithmetic immediate
           end else begin
             illegal_insn = 1'b1; // Mark as illegal if none of the above
           end
