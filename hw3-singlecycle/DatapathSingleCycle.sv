@@ -433,6 +433,8 @@ module DatapathSingleCycle (
                 rf_we = 1'b0;
                 branch_taken = 1'b0;
                 pc_update_request = 1'b0;
+                pcNext = pcCurrent + 4;
+                
             end 
         end
     endcase
