@@ -363,7 +363,7 @@ module DatapathSingleCycle (
           3'b101: begin 
             if (insn_from_imem[30] == 0) begin // SRL
               rf_we = 1'b1;
-              rf_wdata = srl_result;
+                rf_wdata = rs1_data >> (rs2_data[4:0]);
               // pcNext = pcCurrent + 4;
             end else begin // SRA
               rf_we = 1'b1;
