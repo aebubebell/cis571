@@ -342,12 +342,12 @@ module DatapathSingleCycle (
           end
           3'b001: begin // SLL
             rf_we = 1'b1;
-            rf_wdata = sll_result;
+            rf_wdata = data_rs1 << (data_rs2[4:0]);
             // pcNext = pcCurrent + 4;
           end
           3'b010: begin // SLT
             rf_we = 1'b1;
-            rf_wdata = slt_result;
+            rf_wdata = $signed(data_rs1) < $signed(data_rs2) ? 1 : 0;
             // pcNext = pcCurrent + 4;
           end
           3'b011: begin // SLTU
@@ -357,7 +357,7 @@ module DatapathSingleCycle (
           end
           3'b100: begin // XOR
             rf_we = 1'b1;
-            rf_wdata = xor_result;
+            rf_wdata = rs1_data ^ rs2_data;
             // pcNext = pcCurrent + 4;
           end
           3'b101: begin 
@@ -373,7 +373,7 @@ module DatapathSingleCycle (
           end
           3'b110: begin // OR
             rf_we = 1'b1;
-            rf_wdata = or_result;
+            rf_wdata = rs1_data | rs2_data;
             // pcNext = pcCurrent + 4;
           end
           3'b111: begin // AND
