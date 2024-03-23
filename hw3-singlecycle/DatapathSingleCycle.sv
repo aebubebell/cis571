@@ -454,13 +454,15 @@ module DatapathSingleCycle (
         rf_we = 1'b1;
         addr_to_dmem = rs1_data + imm_i_sext;
         // Load byte and sign-extend
-        rf_wdata = {{24{load_data_from_dmem[7:0]}}};
+        
+        rf_wdata = {{24{load_data_from_dmem[7]}}, load_data_from_dmem[7:0]};
+
       end
       3'b001: begin // LH
         rf_we = 1'b1;
         addr_to_dmem = rs1_data + imm_i_sext;
         // Load halfword and sign-extend
-        rf_wdata = {{16{load_data_from_dmem[15:0]}}};
+        rf_wdata = {{16{load_data_from_dmem[15]}}, load_data_from_dmem[15:0]};
       end
       3'b010: begin // LW
         rf_we = 1'b1;
