@@ -508,6 +508,8 @@ module DatapathSingleCycle (
       
     endcase
 
+  end
+
 endmodule
 
 /* A memory module that supports 1-cycle reads and writes, with one read-only port
