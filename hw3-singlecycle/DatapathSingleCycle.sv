@@ -506,7 +506,7 @@ module DatapathSingleCycle (
     endcase
   end
       
-  end
+    endcase
 
 endmodule
 
