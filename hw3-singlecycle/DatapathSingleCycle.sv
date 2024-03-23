@@ -446,7 +446,7 @@ module DatapathSingleCycle (
                 
             end 
         end
-    endcase
+    
     OpLoad: begin
     // Load instructions
     case (insn_funct3)
@@ -505,6 +505,7 @@ module DatapathSingleCycle (
       default: illegal_insn = 1'b1;
     endcase
   end
+      
   end
 
 endmodule
