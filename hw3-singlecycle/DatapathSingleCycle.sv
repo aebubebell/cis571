@@ -448,43 +448,37 @@ module DatapathSingleCycle (
         end
     
     OpLoad: begin
-    // Load instructions
-    case (insn_funct3)
-      3'b000: begin // LB
-        rf_we = 1'b1;
-        addr_to_dmem = rs1_data + imm_i_sext;
-        // Load byte and sign-extend
-        
-        rf_wdata = {{24{load_data_from_dmem[7]}}, load_data_from_dmem[7:0]};
+  // Load instructions
+  case (insn_funct3)
+    3'b000: begin // LB
+      rf_we = 1'b1;
+      // Load byte and sign-extend
+      rf_wdata = {{24{load_data_from_dmem[7]}}, load_data_from_dmem[7:0]};
+    end
+    3'b001: begin // LH
+      rf_we = 1'b1;
+      // Load halfword and sign-extend
+      rf_wdata = {{16{load_data_from_dmem[15]}}, load_data_from_dmem[15:0]};
+    end
+    3'b010: begin // LW
+      rf_we = 1'b1;
+      // Load word
+      rf_wdata = load_data_from_dmem;
+    end
+    3'b100: begin // LBU
+      rf_we = 1'b1;
+      // Load byte and zero-extend
+      rf_wdata = {24'b0, load_data_from_dmem[7:0]};
+    end
+    3'b101: begin // LHU
+      rf_we = 1'b1;
+      // Load halfword and zero-extend
+      rf_wdata = {16'b0, load_data_from_dmem[15:0]};
+    end
+    default: illegal_insn = 1'b1;
+  endcase
+end
 
-      end
-      3'b001: begin // LH
-        rf_we = 1'b1;
-        addr_to_dmem = rs1_data + imm_i_sext;
-        // Load halfword and sign-extend
-        rf_wdata = {{16{load_data_from_dmem[15]}}, load_data_from_dmem[15:0]};
-      end
-      3'b010: begin // LW
-        rf_we = 1'b1;
-        addr_to_dmem = rs1_data + imm_i_sext;
-        // Load word
-        rf_wdata = load_data_from_dmem;
-      end
-      3'b100: begin // LBU
-        rf_we = 1'b1;
-        addr_to_dmem = rs1_data + imm_i_sext;
-        // Load byte and zero-extend
-        rf_wdata = {24'b0, load_data_from_dmem[7:0]};
-      end
-      3'b101: begin // LHU
-        rf_we = 1'b1;
-        addr_to_dmem = rs1_data + imm_i_sext;
-        // Load halfword and zero-extend
-        rf_wdata = {16'b0, load_data_from_dmem[15:0]};
-      end
-      default: illegal_insn = 1'b1;
-    endcase
-  end
 
   OpStore: begin
     // Store instructions
