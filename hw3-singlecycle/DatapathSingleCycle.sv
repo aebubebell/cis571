@@ -71,7 +71,7 @@ module DatapathSingleCycle (
   wire [4:0] insn_rd;
   wire [`OPCODE_SIZE] insn_opcode;
 
-
+  logic [31:0] temp; // temporary adder 
   logic rf_we; // Register file write enable
   logic [31:0] rf_wdata; // Data to write to register file
   logic branch_taken; // Branch decision
@@ -265,7 +265,7 @@ module DatapathSingleCycle (
     // branch_offset = 32'sd0;
     halt = 1'b0;
     pcNext = pcCurrent + 4;
-    wire [31:0] temp = rs1_data + imm_i_sext;
+    temp = rs1_data + imm_i_sext;
 
     case (insn_opcode)
       OpLui: begin
