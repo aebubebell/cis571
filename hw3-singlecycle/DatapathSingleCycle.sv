@@ -522,7 +522,7 @@ module DatapathSingleCycle (
         //     temp = 'd0
         // end
       endcase
-      addr_to_dmem = {{temp[31:2]}, 2'b00};
+      //addr_to_dmem = {{temp[31:2]}, 2'b00};
     end
 
 
