@@ -460,6 +460,10 @@ module DatapathSingleCycle (
             2'b01: rf_wdata = {{24{load_data_from_dmem[15]}}, load_data_from_dmem[15:8]};
             2'b10: rf_wdata = {{24{load_data_from_dmem[23]}}, load_data_from_dmem[23:16]};
             2'b11: rf_wdata = {{24{load_data_from_dmem[31]}}, load_data_from_dmem[31:24]};
+            default: begin
+                illegal_insn = 1'b1;
+                rf_we   = 1'b0;
+              end
           endcase
         end
         3'b001: begin // LH
