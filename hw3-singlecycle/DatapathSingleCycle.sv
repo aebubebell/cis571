@@ -469,9 +469,9 @@ module DatapathSingleCycle (
         3'b001: begin // LH
           rf_we = 1'b1;
           temp = rs1_data + imm_i_sext;
-          case (temp[1:0])
-            2'b00: rf_wdata = {{16{load_data_from_dmem[15]}}, load_data_from_dmem[15:0]};
-            2'b10: rf_wdata = {{16{load_data_from_dmem[31]}}, load_data_from_dmem[31:16]};
+          case (temp[1])
+            1'b0: rf_wdata = {{16{load_data_from_dmem[15]}}, load_data_from_dmem[15:0]};
+            1'b1: rf_wdata = {{16{load_data_from_dmem[31]}}, load_data_from_dmem[31:16]};
             default: begin
               illegal_insn = 1'b1;
               rf_we = 1'b0; // Do not write to register file on misaligned access
