@@ -448,13 +448,12 @@ module DatapathSingleCycle (
         end
     
 
-    OpLoad: begin
-      // Load instructions
+   OpLoad: begin
+  // Load instructions
       case (insn_funct3)
         3'b000: begin // LB
           rf_we = 1'b1;
-          temp_addr = rs1_data + imm_i_sext;
-          case (temp_addr[1:0])
+          case ((rs1_data + imm_i_sext)[1:0])
             2'b00: rf_wdata = {{24{load_data_from_dmem[7]}}, load_data_from_dmem[7:0]};
             2'b01: rf_wdata = {{24{load_data_from_dmem[15]}}, load_data_from_dmem[15:8]};
             2'b10: rf_wdata = {{24{load_data_from_dmem[23]}}, load_data_from_dmem[23:16]};
@@ -463,31 +462,27 @@ module DatapathSingleCycle (
         end
         3'b001: begin // LH
           rf_we = 1'b1;
-          temp_addr = rs1_data + imm_i_sext;
-          case (temp_addr[1:0])
+          case ((rs1_data + imm_i_sext)[1:0])
             2'b00: rf_wdata = {{16{load_data_from_dmem[15]}}, load_data_from_dmem[15:0]};
             2'b10: rf_wdata = {{16{load_data_from_dmem[31]}}, load_data_from_dmem[31:16]};
             default: begin
               illegal_insn = 1'b1;
-              rf_we = 1'b0; // Do not write to register file on misaligned access
+              rf_we = 1'b0; // Prevent register file write on misaligned access
             end
           endcase
         end
         3'b010: begin // LW
           rf_we = 1'b1;
-          temp_addr = rs1_data + imm_i_sext;
-          // LW requires the address to be word-aligned
-          if (temp_addr[1:0] == 2'b00) begin
+          if ((rs1_data + imm_i_sext)[1:0] == 2'b00) begin
             rf_wdata = load_data_from_dmem;
           end else begin
             illegal_insn = 1'b1;
-            rf_we = 1'b0; // Do not write to register file on misaligned access
+            rf_we = 1'b0; // Prevent register file write on misaligned access
           end
         end
         3'b100: begin // LBU
           rf_we = 1'b1;
-          temp_addr = rs1_data + imm_i_sext;
-          case (temp_addr[1:0])
+          case ((rs1_data + imm_i_sext)[1:0])
             2'b00: rf_wdata = {24'b0, load_data_from_dmem[7:0]};
             2'b01: rf_wdata = {24'b0, load_data_from_dmem[15:8]};
             2'b10: rf_wdata = {24'b0, load_data_from_dmem[23:16]};
@@ -496,17 +491,16 @@ module DatapathSingleCycle (
         end
         3'b101: begin // LHU
           rf_we = 1'b1;
-          temp_addr = rs1_data + imm_i_sext;
-          case (temp_addr[1:0])
+          case ((rs1_data + imm_i_sext)[1:0])
             2'b00: rf_wdata = {16'b0, load_data_from_dmem[15:0]};
             2'b10: rf_wdata = {16'b0, load_data_from_dmem[31:16]};
             default: begin
               illegal_insn = 1'b1;
-                rf_we = 1'b0; // Don't write to register file on misaligned access
+              rf_we = 1'b0; // Prevent register file write on misaligned access
             end
           endcase
         end
-    default: illegal_insn = 1'b1;
+        default: illegal_insn = 1'b1;
   endcase
 end
 
