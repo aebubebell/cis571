@@ -481,13 +481,14 @@ module DatapathSingleCycle (
         3'b010: begin // LW
           rf_we = 1'b1;
           temp = rs1_data + imm_i_sext;
+          rf_wdata = load_data_from_dmem;
           // LW requires the address to be word-aligned
-          if (temp[1:0] == 2'b00) begin
-            rf_wdata = load_data_from_dmem;
-          end else begin
-            illegal_insn = 1'b1;
-            rf_we = 1'b0; // Do not write to register file on misaligned access
-          end
+          // if (temp[1:0] == 2'b00) begin
+          //   rf_wdata = load_data_from_dmem;
+          // end else begin
+          //   illegal_insn = 1'b1;
+          //   rf_we = 1'b0; // Do not write to register file on misaligned access
+          // end
         end
         3'b100: begin // LBU
           rf_we = 1'b1;
