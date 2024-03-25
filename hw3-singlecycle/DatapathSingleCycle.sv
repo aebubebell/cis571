@@ -71,7 +71,7 @@ module DatapathSingleCycle (
   wire [4:0] insn_rd;
   wire [`OPCODE_SIZE] insn_opcode;
 
-  logic [31:0] temp; // temporary adder 
+  logic [31:0] ; // orary adder 
   logic rf_we; // Register file write enable
   logic [31:0] rf_wdata; // Data to write to register file
   logic branch_taken; // Branch decision
@@ -460,14 +460,18 @@ module DatapathSingleCycle (
             2'b01: rf_wdata = {{24{load_data_from_dmem[15]}}, load_data_from_dmem[15:8]};
             2'b10: rf_wdata = {{24{load_data_from_dmem[23]}}, load_data_from_dmem[23:16]};
             2'b11: rf_wdata = {{24{load_data_from_dmem[31]}}, load_data_from_dmem[31:24]};
+            default: begin
+                illegal_insn = 1'b1;
+                regfile_we   = 1'b0;
+            end
           endcase
         end
         3'b001: begin // LH
           rf_we = 1'b1;
           temp = rs1_data + imm_i_sext;
-          case (temp[1:0])
-            2'b00: rf_wdata = {{16{load_data_from_dmem[15]}}, load_data_from_dmem[15:0]};
-            2'b10: rf_wdata = {{16{load_data_from_dmem[31]}}, load_data_from_dmem[31:16]};
+          case (temp[1])
+            1'b0: rf_wdata = {{16{load_data_from_dmem[15]}}, load_data_from_dmem[15:0]};
+            1'b1: rf_wdata = {{16{load_data_from_dmem[31]}}, load_data_from_dmem[31:16]};
             default: begin
               illegal_insn = 1'b1;
               rf_we = 1'b0; // Do not write to register file on misaligned access
@@ -477,13 +481,14 @@ module DatapathSingleCycle (
         3'b010: begin // LW
           rf_we = 1'b1;
           temp = rs1_data + imm_i_sext;
+          rf_wdata = load_data_from_dmem;
           // LW requires the address to be word-aligned
-          if (temp[1:0] == 2'b00) begin
-            rf_wdata = load_data_from_dmem;
-          end else begin
-            illegal_insn = 1'b1;
-            rf_we = 1'b0; // Do not write to register file on misaligned access
-          end
+          // if (temp[1:0] == 2'b00) begin
+          //   rf_wdata = load_data_from_dmem;
+          // end else begin
+          //   illegal_insn = 1'b1;
+          //   rf_we = 1'b0; // Do not write to register file on misaligned access
+          // end
         end
         3'b100: begin // LBU
           rf_we = 1'b1;
@@ -493,6 +498,10 @@ module DatapathSingleCycle (
             2'b01: rf_wdata = {24'b0, load_data_from_dmem[15:8]};
             2'b10: rf_wdata = {24'b0, load_data_from_dmem[23:16]};
             2'b11: rf_wdata = {24'b0, load_data_from_dmem[31:24]};
+            default: begin
+              illegal_insn = 1'b1;
+              rf_we = 1'b0; // Do not write to register file on misaligned access
+            end
           endcase
         end
         3'b101: begin // LHU
@@ -507,8 +516,13 @@ module DatapathSingleCycle (
             end
           endcase
         end
-        default: illegal_insn = 1'b1;
+        default: begin
+            illegal_insn = 1'b1;
+            rf_we = 1'b0;
+            temp = 'd0
+        end
       endcase
+      addr_to_dmem = {{temp[31:2]}, 2'b00};
     end
 
 
