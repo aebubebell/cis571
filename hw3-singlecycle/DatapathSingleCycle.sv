@@ -265,7 +265,7 @@ module DatapathSingleCycle (
     // branch_offset = 32'sd0;
     halt = 1'b0;
     pcNext = pcCurrent + 4;
-    temp = rs1_data + imm_i_sext;
+    temp = 'd0;
 
     case (insn_opcode)
       OpLui: begin
