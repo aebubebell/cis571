@@ -462,7 +462,7 @@ module DatapathSingleCycle (
             2'b11: rf_wdata = {{24{load_data_from_dmem[31]}}, load_data_from_dmem[31:24]};
             default: begin
                 illegal_insn = 1'b1;
-                regfile_we   = 1'b0;
+                rf_we = 1'b0;
             end
           endcase
         end
