@@ -516,11 +516,11 @@ module DatapathSingleCycle (
             end
           endcase
         end
-        default: begin
-            illegal_insn = 1'b1;
-            rf_we = 1'b0;
-            temp = 'd0
-        end
+        // default: begin
+        //     illegal_insn = 1'b1;
+        //     rf_we = 1'b0;
+        //     temp = 'd0
+        // end
       endcase
       addr_to_dmem = {{temp[31:2]}, 2'b00};
     end
