@@ -71,7 +71,7 @@ module DatapathSingleCycle (
   wire [4:0] insn_rd;
   wire [`OPCODE_SIZE] insn_opcode;
 
-  logic [31:0] ; // orary adder 
+  logic [31:0] temp; // temporary adder 
   logic rf_we; // Register file write enable
   logic [31:0] rf_wdata; // Data to write to register file
   logic branch_taken; // Branch decision
