@@ -273,7 +273,7 @@ module DatapathSingleCycle (
         rf_we = 1'b1;
         rf_wdata = lui_imm;
       end
-      OpAuipc: begin //AUIPC
+      OpAuipc: begin // AUIPC
         rf_we = 1'b1;
         rf_wdata = pcCurrent + {{imm_u[19:0]}, 12'b0};
       end
@@ -462,9 +462,10 @@ module DatapathSingleCycle (
             2'b11: rf_wdata = {{24{load_data_from_dmem[31]}}, load_data_from_dmem[31:24]};
             default: begin
                 illegal_insn = 1'b1;
-                rf_we   = 1'b0;
+                rf_we = 1'b0;
               end
           endcase
+            addr_to_dmem = {temp[31:2], 2'b00};
         end
         3'b001: begin // LH
           rf_we = 1'b1;
@@ -477,18 +478,20 @@ module DatapathSingleCycle (
               rf_we = 1'b0; // Do not write to register file on misaligned access
             end
           endcase
+            addr_to_dmem = {temp[31:2], 2'b00};
         end
         3'b010: begin // LW
           rf_we = 1'b1;
           temp = rs1_data + imm_i_sext;
-          rf_wdata = load_data_from_dmem;
-          // LW requires the address to be word-aligned
-          // if (temp[1:0] == 2'b00) begin
-          //   rf_wdata = load_data_from_dmem;
-          // end else begin
-          //   illegal_insn = 1'b1;
-          //   rf_we = 1'b0; // Do not write to register file on misaligned access
-          // end
+          //rf_wdata = load_data_from_dmem;
+          LW requires the address to be word-aligned
+          if (temp[1:0] == 2'b00) begin
+            rf_wdata = load_data_from_dmem;
+          end else begin
+            illegal_insn = 1'b1;
+            rf_we = 1'b0; // Do not write to register file on misaligned access
+          end
+            addr_to_dmem = {temp[31:2], 2'b00};
         end
         3'b100: begin // LBU
           rf_we = 1'b1;
@@ -499,6 +502,7 @@ module DatapathSingleCycle (
             2'b10: rf_wdata = {24'b0, load_data_from_dmem[23:16]};
             2'b11: rf_wdata = {24'b0, load_data_from_dmem[31:24]};
           endcase
+          addr_to_dmem = {temp[31:2], 2'b00};
         end
         3'b101: begin // LHU
           rf_we = 1'b1;
@@ -511,6 +515,7 @@ module DatapathSingleCycle (
               rf_we = 1'b0; // Do not write to register file on misaligned access
             end
           endcase
+            addr_to_dmem = {temp[31:2], 2'b00};
         end
         default: illegal_insn = 1'b1;
       endcase
@@ -518,27 +523,30 @@ module DatapathSingleCycle (
 
 
 
-//   OpStore: begin
-//     // Store instructions
-//     case (insn_funct3)
-//       3'b000: begin // SB
-//         addr_to_dmem = rs1_data + imm_s_sext;
-//         store_data_to_dmem = {4{rs2_data[7:0]}};
-//         store_we_to_dmem = 4'b0001; // Enable writing the LSB
-//       end
-//       3'b001: begin // SH
-//         addr_to_dmem = rs1_data + imm_s_sext;
-//         store_data_to_dmem = {2{rs2_data[15:0]}};
-//         store_we_to_dmem = 4'b0011; // Enable writing the two LSBs
-//       end
-//       3'b010: begin // SW
-//         addr_to_dmem = rs1_data + imm_s_sext;
-//         store_data_to_dmem = rs2_data;
-//         store_we_to_dmem = 4'b1111; // Enable writing all bytes
-//       end
-//       default: illegal_insn = 1'b1;
-//     endcase
-//   end
+  OpStore: begin
+    // Store instructions
+    case (insn_funct3)
+      3'b000: begin // SB
+        temp = rs1_data + imm_s_sext;
+        store_data_to_dmem = {4{rs2_data[7:0]}};
+        store_we_to_dmem = 4'b0001; // Enable writing the LSB
+      end
+        addr_to_dmem = {temp[31:2], 2'b00};
+      3'b001: begin // SH
+        temp = rs1_data + imm_s_sext;
+        store_data_to_dmem = {2{rs2_data[15:0]}};
+        store_we_to_dmem = 4'b0011; // Enable writing the two LSBs
+      end
+        addr_to_dmem = {temp[31:2], 2'b00};
+      3'b010: begin // SW
+        temp = rs1_data + imm_s_sext;
+        store_data_to_dmem = rs2_data;
+        store_we_to_dmem = 4'b1111; // Enable writing all bytes
+      end
+        addr_to_dmem = {temp[31:2], 2'b00};
+      default: illegal_insn = 1'b1;
+    endcase
+  end
       
     endcase
 
