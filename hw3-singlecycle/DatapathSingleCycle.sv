@@ -537,14 +537,14 @@ module DatapathSingleCycle (
         store_data_to_dmem = {2{rs2_data[15:0]}};
         store_we_to_dmem = 4'b0011; // Enable writing the two LSBs
       end
-        addr_to_dmem = {temp[31:2], 2'b00};
+        //addr_to_dmem = {temp[31:2], 2'b00};
       3'b010: begin // SW
         temp = rs1_data + imm_s_sext;
         store_data_to_dmem = rs2_data;
         store_we_to_dmem = 4'b1111; // Enable writing all bytes
       end
       default: illegal_insn = 1'b1;
-      addr_to_dmem = {temp[31:2], 2'b00};
+      //addr_to_dmem = {temp[31:2], 2'b00};
     endcase
   end
       
