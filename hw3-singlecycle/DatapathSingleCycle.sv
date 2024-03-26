@@ -484,7 +484,7 @@ module DatapathSingleCycle (
           rf_we = 1'b1;
           temp = rs1_data + imm_i_sext;
           //rf_wdata = load_data_from_dmem;
-          LW requires the address to be word-aligned
+          //LW requires the address to be word-aligned
           if (temp[1:0] == 2'b00) begin
             rf_wdata = load_data_from_dmem;
           end else begin
