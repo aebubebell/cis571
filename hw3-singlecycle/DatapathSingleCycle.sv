@@ -364,7 +364,7 @@ module DatapathSingleCycle (
               rf_we = 1'b1;
               rf_wdata = $signed(rs1_data) % $signed(rs2_data);
             end
-            else (insn_remu) begin
+              else begin
               // Remainder of division unsigned
               rf_we = 1'b1;
               rf_wdata = rs1_data % rs2_data; // No sign consideration
