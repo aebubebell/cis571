@@ -523,32 +523,54 @@ module DatapathSingleCycle (
 
 
 
-  OpStore: begin
-    // Store instructions
-    case (insn_funct3)
-      3'b000: begin // SB
-        temp = rs1_data + imm_s_sext;
-        store_data_to_dmem = {4{rs2_data[7:0]}};
-        store_we_to_dmem = 4'b0001; // Enable writing the LSB
-      end
-      //addr_to_dmem = {temp[31:2], 2'b00};
-      3'b001: begin // SH
-        temp = rs1_data + imm_s_sext;
-        store_data_to_dmem = {2{rs2_data[15:0]}};
-        store_we_to_dmem = 4'b0011; // Enable writing the two LSBs
-      end
-        //addr_to_dmem = {temp[31:2], 2'b00};
-      3'b010: begin // SW
-        temp = rs1_data + imm_s_sext;
-        store_data_to_dmem = rs2_data;
-        store_we_to_dmem = 4'b1111; // Enable writing all bytes
-        
-      end
-      default: illegal_insn = 1'b1;
-      
-    endcase
-    addr_to_dmem = {temp[31:2], 2'b00};
-  end
+OpStore: begin
+  case (insn_funct3)
+    3'b000: begin // SB
+      temp = rs1_data + imm_s_sext;
+      case (temp[1:0])
+        2'b00: begin // aligned
+          store_data_to_dmem = rs2_data[7:0];
+          store_we_to_dmem = 4'b0001; // Enable writing the LSB
+        end
+        2'b01: begin // mod 1
+          // Handle the case when the address is not aligned
+          illegal_insn = 1'b1;
+        end
+        2'b10: begin // mod 2
+          // Handle the case when the address is not aligned
+          illegal_insn = 1'b1;
+        end
+        2'b11: begin // mod 3
+          // Handle the case when the address is not aligned
+          illegal_insn = 1'b1;
+        end
+      endcase
+    end
+    3'b001: begin // SH
+      temp = rs1_data + imm_s_sext;
+      case (temp[0])
+        1'b0: begin // aligned
+          store_data_to_dmem = rs2_data[15:0];
+          store_we_to_dmem = 4'b0011; // Enable writing the two LSBs
+        end
+        1'b1: begin // mod 1
+          // Handle the case when the address is not aligned
+          illegal_insn = 1'b1;
+        end
+      endcase
+    end
+    3'b010: begin // SW
+      temp = rs1_data + imm_s_sext;
+      // Assuming full alignment for SW
+      store_data_to_dmem = rs2_data;
+      store_we_to_dmem = 4'b1111; // Enable writing all bytes
+    end
+    default: illegal_insn = 1'b1;
+  endcase
+     addr_to_dmem = {temp[31:2], 2'b00};
+end
+
+   
       
     endcase
 
