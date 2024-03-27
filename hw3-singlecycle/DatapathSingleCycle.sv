@@ -335,11 +335,11 @@ module DatapathSingleCycle (
               if (insn_sub) begin // SUB
               rf_we = 1'b1;
               rf_wdata = sub_result;
-            end else begin // ADD
+            end else if begin // ADD
               rf_we = 1'b1;
               rf_wdata = add_result;
             end else if (insn_mul) begin
-              // Multiplication
+              // MUL
               rf_we = 1'b1;
               rf_wdata = rs1_data * rs2_data;
             end else if (insn_mulh) begin
@@ -364,7 +364,7 @@ module DatapathSingleCycle (
               rf_we = 1'b1;
               rf_wdata = $signed(rs1_data) % $signed(rs2_data);
             end
-            else if (insn_remu) begin
+            else (insn_remu) begin
               // Remainder of division unsigned
               rf_we = 1'b1;
               rf_wdata = rs1_data % rs2_data; // No sign consideration
