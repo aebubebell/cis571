@@ -329,7 +329,7 @@ module DatapathSingleCycle (
             illegal_insn = 1'b1;
         endcase
       end
-      OpRegMath: begin
+      OpRegReg: begin
         case (insn_funct3)
           3'b000: begin 
         if (insn_sub) begin // SUB
