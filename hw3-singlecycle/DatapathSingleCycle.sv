@@ -332,10 +332,10 @@ module DatapathSingleCycle (
       OpRegMath: begin
         case (insn_funct3)
           3'b000: begin 
-              if (insn_sub) begin // SUB
+        if (insn_sub) begin // SUB
               rf_we = 1'b1;
               rf_wdata = sub_result;
-            end else if begin // ADD
+        end else if (insn_add) begin // ADD
               rf_we = 1'b1;
               rf_wdata = add_result;
             end else if (insn_mul) begin
