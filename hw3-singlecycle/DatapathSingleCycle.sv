@@ -329,7 +329,7 @@ module DatapathSingleCycle (
             illegal_insn = 1'b1;
         endcase
       end
-      OpRegReg: begin
+      OpRegMath: begin
         case (insn_funct3)
           3'b000: begin 
               if (insn_sub) begin // SUB
@@ -338,6 +338,36 @@ module DatapathSingleCycle (
             end else begin // ADD
               rf_we = 1'b1;
               rf_wdata = add_result;
+            end else if (insn_mul) begin
+              // Multiplication
+              rf_we = 1'b1;
+              rf_wdata = rs1_data * rs2_data;
+            end else if (insn_mulh) begin
+                // Multiply high
+              // Multiply and keep higher half
+              rf_we = 1'b1;
+              rf_wdata = ($signed(rs1_data) * $signed(rs2_data)) >> 32;
+            end else if (insn_mulhsu) begin
+              // Multiply high signed-unsigned
+              rf_we = 1'b1;
+              rf_wdata = ($signed(rs1_data) * rs2_data) >> 32;
+            end else if (insn_mulhu) begin
+              // Multiply high unsigned
+              rf_we = 1'b1;
+              rf_wdata = (rs1_data * rs2_data) >> 32;
+            end else if (insn_divu) begin
+              // Divide unsigned
+              rf_we = 1'b1;
+              rf_wdata = rs1_data / rs2_data; // Simple division, no sign consideration
+            end else if (insn_rem) begin
+              // Remainder of division
+              rf_we = 1'b1;
+              rf_wdata = $signed(rs1_data) % $signed(rs2_data);
+            end
+            else if (insn_remu) begin
+              // Remainder of division unsigned
+              rf_we = 1'b1;
+              rf_wdata = rs1_data % rs2_data; // No sign consideration
             end
             // pcNext = pcCurrent + 4;
           end
