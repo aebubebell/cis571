@@ -555,13 +555,15 @@ OpStore: begin
     end
     3'b001: begin // SH
       temp = rs1_data + imm_s_sext;
-      case (temp[0])
+        case (temp[1])
         1'b0: begin // aligned
           store_data_to_dmem[15:0] = rs2_data[15:0];
           store_we_to_dmem = 4'b0011; // Enable writing the two LSBs
         end
         1'b1: begin // mod 1
           // Handle the case when the address is not aligned
+          store_data_to_dmem[31:16] = rs2_data[15:0];
+          store_we_to_dmem = 4'b1100;
           illegal_insn = 1'b1;
         end
       endcase
