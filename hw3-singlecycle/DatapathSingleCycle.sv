@@ -557,7 +557,7 @@ OpStore: begin
       temp = rs1_data + imm_s_sext;
       case (temp[0])
         1'b0: begin // aligned
-          store_data_to_dmem = rs2_data[15:0];
+          store_data_to_dmem[15:0] = rs2_data[15:0];
           store_we_to_dmem = 4'b0011; // Enable writing the two LSBs
         end
         1'b1: begin // mod 1
@@ -569,7 +569,7 @@ OpStore: begin
     3'b010: begin // SW
       temp = rs1_data + imm_s_sext;
       // Assuming full alignment for SW
-      store_data_to_dmem = rs2_data;
+      store_data_to_dmem[31:0] = rs2_data;
       store_we_to_dmem = 4'b1111; // Enable writing all bytes
     end
     default: illegal_insn = 1'b1;
