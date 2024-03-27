@@ -529,18 +529,25 @@ OpStore: begin
       temp = rs1_data + imm_s_sext;
       case (temp[1:0])
         2'b00: begin // aligned
-          store_data_to_dmem = rs2_data[7:0];
+            store_data_to_dmem[7:0] = rs2_data[7:0];
           store_we_to_dmem = 4'b0001; // Enable writing the LSB
         end
         2'b01: begin // mod 1
+            store_data_to_dmem[15:8] = rs2_data[7:0];
+            store_we_to_dmem = 4'b0010;
           // Handle the case when the address is not aligned
           illegal_insn = 1'b1;
         end
         2'b10: begin // mod 2
           // Handle the case when the address is not aligned
+            store_data_to_dmem[23 : 16] = rs2_data[7:0];
+       
+           store_we_to_dmem = 4'b0100;
           illegal_insn = 1'b1;
         end
         2'b11: begin // mod 3
+            store_data_to_dmem[31 : 24] = rs2_data[7:0];
+            store_we_to_dmem = 4'b1000;
           // Handle the case when the address is not aligned
           illegal_insn = 1'b1;
         end
