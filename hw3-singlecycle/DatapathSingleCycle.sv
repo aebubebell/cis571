@@ -346,11 +346,11 @@ module DatapathSingleCycle (
                 // MULH
               // rf_we = 1'b1;
               // rf_wdata = ($signed(rs1_data) * $signed(rs2_data)) >> 32;
-                Logic [63:0] multh_hld;
+                logic [63:0] multh_hld;
               multh_hld = ($signed(data_rs1) * $signed(data_rs2));
               rf_wdata = inter_mulh[63:32];
             end else if (insn_mulhsu) begin
-              // Multiply high signed-unsigned
+              // MULHSU
               rf_we = 1'b1;
               rf_wdata = ($signed(rs1_data) * rs2_data) >> 32;
             end else if (insn_mulhu) begin
