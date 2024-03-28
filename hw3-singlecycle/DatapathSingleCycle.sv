@@ -353,11 +353,13 @@ module DatapathSingleCycle (
               // MULHSU
               rf_we = 1'b1;
               rf_wdata = ($signed(rs1_data) * rs2_data) >> 32;
-            end else if (insn_mulhu) begin
-              // Multiply high unsigned
-              rf_we = 1'b1;
-              rf_wdata = (rs1_data * rs2_data) >> 32;
-            end else if (insn_divu) begin
+            end 
+            //   else if (insn_mulhu) begin
+            //   // Multiply high unsigned
+            //   rf_we = 1'b1;
+            //   rf_wdata = (rs1_data * rs2_data) >> 32;
+            // end 
+              else if (insn_divu) begin
               // Divide unsigned
               rf_we = 1'b1;
               rf_wdata = rs1_data / rs2_data; // Simple division, no sign consideration
