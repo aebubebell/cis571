@@ -342,13 +342,12 @@ module DatapathSingleCycle (
               // MUL
               rf_we = 1'b1;
               rf_wdata = rs1_data * rs2_data;
-            end else if (insn_from_imem[31:25] == 7'd0) begin
-                // MULH
-              // rf_we = 1'b1;
-              // rf_wdata = ($signed(rs1_data) * $signed(rs2_data)) >> 32;
-                logic [63:0] multh_hld;
-                multh_hld = ($signed(rs1_data) * $signed(rs2_data));
+            end else if (insn_mulh) begin
+              // MULH
+              logic [63:0] multh_hld;
+              multh_hld = ($signed(rs1_data) * $signed(rs2_data));
               rf_wdata = multh_hld[63:32];
+              rf_we = 1'b1; // Enable writing to the register file
             end else if (insn_mulhsu) begin
               // MULHSU
               rf_we = 1'b1;
